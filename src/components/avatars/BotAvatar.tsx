@@ -33,7 +33,7 @@ export function BotAvatar({ shape, hue, size = 56, label, className, pulse }: Pr
         {shape === 'cube' && <CubeSvg colors={c} gid={gid} />}
       </div>
       {label ? (
-        <span className="max-w-[5.5rem] truncate text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/90">
+        <span className="max-w-[4.8rem] text-center text-[9px] font-semibold uppercase leading-tight tracking-[0.08em] text-cyan-100 drop-shadow-[0_1px_2px_#050816]">
           {label}
         </span>
       ) : null}

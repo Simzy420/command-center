@@ -80,7 +80,7 @@ export function GridBoard() {
   }
 
   return (
-    <div ref={wrapRef} className="mx-auto w-full max-w-6xl px-2 pb-28 pt-2">
+    <div ref={wrapRef} className="mx-auto w-full max-w-6xl px-2 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-2">
       {pageWidgets.length === 0 ? (
         <p className="px-4 py-16 text-center text-white/45">
           Empty board. Use the + dock button to register a widget onto the JSON layout — the grid is not hard-coded.

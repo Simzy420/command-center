@@ -29,9 +29,11 @@ export function TopBar() {
           <Menu className="h-6 w-6" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[11px] font-bold uppercase tracking-[0.32em] text-cyan-300">Dark</p>
-          <h1 className="bg-gradient-to-r from-fuchsia-400 via-violet-300 to-cyan-300 bg-clip-text font-display text-[22px] font-extrabold uppercase leading-none tracking-wide text-transparent">
-            Command Center
+          <p className="font-display text-[13px] font-bold uppercase tracking-[0.32em] text-cyan-300">Dark</p>
+          <h1 className="bg-gradient-to-r from-fuchsia-400 via-violet-300 to-cyan-300 bg-clip-text font-display text-[clamp(1.15rem,5.2vw,1.55rem)] font-extrabold uppercase leading-[1.05] tracking-wide text-transparent">
+            Command
+            <br />
+            Center
           </h1>
           <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
             Observe · Analyze · Silence
@@ -40,34 +42,35 @@ export function TopBar() {
         <button
           type="button"
           onClick={() => setObserveOnly(!observeOnly)}
-          className={cn('observe-pill shrink-0 text-left', observeOnly && 'observe-pill-on')}
+          className={cn('observe-pill w-[9.6rem] shrink-0 text-left', observeOnly && 'observe-pill-on')}
         >
-          <span className="flex items-center gap-2 font-display text-[10px] font-bold uppercase tracking-[0.2em]">
+          <span className="flex items-center gap-2 font-display text-[10px] font-bold uppercase tracking-[0.16em]">
             <span className={cn('h-2 w-2 rounded-full', observeOnly ? 'bg-rose-400 shadow-[0_0_8px_#fb7185]' : 'bg-white/30')} />
             Observe only
           </span>
-          <span className="mt-1 block max-w-[9.5rem] text-[10px] leading-snug text-rose-100/80">
+          <span className="mt-1 block text-[10px] leading-snug text-rose-100/80">
             Watch bots work — you don&apos;t intervene
           </span>
         </button>
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        <label className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search widgets (stub)"
-            className="hud-input w-full pl-9"
-          />
-        </label>
-        <label className="flex items-center gap-1 rounded-2xl border border-white/10 bg-black/30 px-2 py-1">
+      <label className="relative mt-3 block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search widgets"
+          className="hud-input w-full pl-9"
+        />
+      </label>
+
+      <div className="mt-2 flex items-center gap-2">
+        <label className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-2 py-1">
           <BotAvatar shape={bot.shape} hue={bot.hue} size={28} />
           <select
             value={bot.id}
             onChange={(e) => setActiveBot(e.target.value)}
-            className="max-w-[7.5rem] bg-transparent text-xs text-white outline-none"
+            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none"
             aria-label="Active bot"
           >
             {BOT_ROSTER.map((b) => (
@@ -88,7 +91,7 @@ export function TopBar() {
       </div>
       {mode === 'edit' ? (
         <p className="mt-2 text-center text-[11px] text-amber-200/80">
-          Edit mode — drag from a widget header (long-press the grip). Use mode keeps scrolling free.
+          Edit mode — drag from a widget header. Use mode keeps scrolling free.
         </p>
       ) : null}
     </header>

@@ -13,7 +13,7 @@ export function AddWidgetSheet() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <div className="w-full max-w-lg rounded-3xl border border-cyan-400/25 bg-[#0a1028] p-4 shadow-glow">
+      <div className="w-full max-w-lg max-h-[min(70vh,36rem)] overflow-y-auto rounded-3xl border border-cyan-400/25 bg-[#0a1028] p-4 shadow-glow">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-sm uppercase tracking-[0.2em] text-cyan-200">Add widget</h2>
           <button type="button" onClick={() => setAddOpen(false)} className="rounded-lg p-2 hover:bg-white/5">

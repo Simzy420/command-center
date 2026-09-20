@@ -10,9 +10,14 @@ const PREFERRED: Record<string, string[]> = {
   pulse: ['chat'],
   ledger: ['files', 'todo'],
   shield: ['todo', 'watchlist'],
-  liquid98: ['imagegen', 'media'],
+  liquid98: ['imagegen'],
   chief: ['chat', 'links'],
 };
+
+function orbitPoint(index: number, count: number) {
+  const a = (index / count) * Math.PI * 2 - Math.PI / 2;
+  return { x: 50 + Math.cos(a) * 36, y: 46 + Math.sin(a) * 26 };
+}
 
 export function EntitySwarm() {
   const observeOnly = useSessionStore((s) => s.observeOnly);
@@ -24,13 +29,18 @@ export function EntitySwarm() {
 
   const particles = useMemo(
     () =>
-      Array.from({ length: 28 }, (_, i) => ({
+      Array.from({ length: 22 }, (_, i) => ({
         id: i,
         x: 8 + ((i * 37) % 84),
-        y: 10 + ((i * 19) % 70),
+        y: 12 + ((i * 19) % 62),
         kind: (['dot', 'tri', 'sq'] as const)[i % 3],
         delay: (i % 7) * 0.35,
       })),
+    [],
+  );
+
+  const homes = useMemo(
+    () => BOT_ROSTER.map((_, i) => orbitPoint(i, BOT_ROSTER.length)),
     [],
   );
 
@@ -49,46 +59,44 @@ export function EntitySwarm() {
     const botsEl = botsRef.current;
     if (!layer || !botsEl) return;
 
-    let raf = 0;
     const nodes = [...botsEl.querySelectorAll<HTMLElement>('[data-bot]')];
-    const state = nodes.map((el, i) => {
-      const rect = layer.getBoundingClientRect();
-      return {
-        el,
-        x: 12 + (i * (rect.width - 80)) / Math.max(1, nodes.length - 1),
-        y: 36 + (i % 2) * 18,
-        ox: 12 + (i * 70) % Math.max(120, rect.width - 80),
-        oy: 28 + (i % 3) * 22,
-      };
-    });
+    const state = nodes.map((el, i) => ({
+      el,
+      x: homes[i]?.x ?? 50,
+      y: homes[i]?.y ?? 46,
+    }));
 
+    let raf = 0;
     const tick = () => {
       const rect = layer.getBoundingClientRect();
       const t = performance.now() / 1000;
       nodes.forEach((el, i) => {
         const botId = el.dataset.bot ?? '';
+        const home = homes[i] ?? { x: 50, y: 46 };
         const s = state[i];
-        let tx = s.ox + Math.cos(t * 0.6 + i) * 18;
-        let ty = s.oy + Math.sin(t * 0.8 + i * 0.7) * 10;
-        if (observeOnly) {
+        let tx = home.x + Math.cos(t * 0.55 + i) * 3;
+        let ty = home.y + Math.sin(t * 0.7 + i * 0.6) * 2.5;
+        if (observeOnly && rect.width > 0) {
           const preferred = PREFERRED[botId] ?? [];
           const active = anchors.find((a) => a.id === activeWidgetId);
           const typed = anchors.find((a) => preferred.includes(a.type));
           const target = active ?? typed;
           if (target) {
-            tx = target.cx - rect.left;
-            ty = Math.min(rect.height - 28, Math.max(16, target.cy - rect.top - 40));
+            tx = ((target.cx - rect.left) / rect.width) * 100;
+            ty = 72;
           }
         }
-        s.x += (tx - s.x) * 0.045;
-        s.y += (ty - s.y) * 0.045;
-        el.style.transform = `translate(${s.x}px, ${s.y}px)`;
+        const ease = observeOnly ? 0.08 : 0.12;
+        s.x += (tx - s.x) * ease;
+        s.y += (ty - s.y) * ease;
+        el.style.left = `${s.x}%`;
+        el.style.top = `${s.y}%`;
       });
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [observeOnly, anchors, activeWidgetId]);
+  }, [observeOnly, anchors, activeWidgetId, homes]);
 
   return (
     <section className="swarm-panel relative mx-3 mt-2 overflow-hidden rounded-3xl">
@@ -102,10 +110,10 @@ export function EntitySwarm() {
           <span className="text-[10px] uppercase tracking-widest text-white/35">Ambient</span>
         )}
       </div>
-      <div ref={layerRef} className="relative h-[168px]">
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 400 160" preserveAspectRatio="none">
-          <ellipse cx="200" cy="82" rx="168" ry="42" fill="none" stroke="rgba(34,233,255,0.28)" strokeWidth="1.2" />
-          <ellipse cx="200" cy="82" rx="120" ry="28" fill="none" stroke="rgba(168,85,247,0.2)" strokeWidth="1" />
+      <div ref={layerRef} className="relative h-[200px]">
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 400 200" preserveAspectRatio="none">
+          <ellipse cx="200" cy="96" rx="168" ry="52" fill="none" stroke="rgba(34,233,255,0.28)" strokeWidth="1.2" />
+          <ellipse cx="200" cy="96" rx="118" ry="34" fill="none" stroke="rgba(168,85,247,0.2)" strokeWidth="1" />
         </svg>
         {particles.map((p) => (
           <span
@@ -114,12 +122,26 @@ export function EntitySwarm() {
             style={{ left: `${p.x}%`, top: `${p.y}%`, animationDelay: `${p.delay}s` }}
           />
         ))}
-        <div ref={botsRef} className="pointer-events-none absolute inset-0">
-          {BOT_ROSTER.map((bot) => (
-            <div key={bot.id} data-bot={bot.id} className="absolute left-0 top-0 will-change-transform">
-              <BotAvatar shape={bot.shape} hue={bot.hue} size={observeOnly ? 42 : 28} label={bot.name} pulse={observeOnly} />
-            </div>
-          ))}
+        <div ref={botsRef} className="absolute inset-0">
+          {BOT_ROSTER.map((bot, i) => {
+            const home = homes[i];
+            return (
+              <div
+                key={bot.id}
+                data-bot={bot.id}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${home.x}%`, top: `${home.y}%` }}
+              >
+                <BotAvatar
+                  shape={bot.shape}
+                  hue={bot.hue}
+                  size={observeOnly ? 40 : 32}
+                  label={bot.name}
+                  pulse={observeOnly}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
