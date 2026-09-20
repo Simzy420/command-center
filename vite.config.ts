@@ -6,7 +6,11 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/** Project Pages path: https://simzy420.github.io/command-center/ */
+const pagesBase = '/command-center/';
+
 export default defineConfig({
+  base: pagesBase,
   plugins: [
     react(),
     VitePWA({
@@ -20,8 +24,8 @@ export default defineConfig({
         background_color: '#050816',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: pagesBase,
+        scope: pagesBase,
         categories: ['productivity', 'utilities'],
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -36,7 +40,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,woff2}'],
-        navigateFallback: '/index.html',
+        navigateFallback: `${pagesBase}index.html`,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

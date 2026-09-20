@@ -15,6 +15,8 @@ npm run preview  # serve dist
 
 Install as a PWA from Safari/Chrome on iPhone or iPad (Add to Home Screen). The service worker caches the app shell so the last saved layout still opens offline (layout JSON is in `localStorage`).
 
+Live (GitHub Pages): https://simzy420.github.io/command-center/
+
 ## Product rules (v1)
 
 - Roster (labels under geometric avatars): Scout, Sniper, Pulse, Ledger, Shield, Liquid98Bot, Chief of Staff.
