@@ -1,0 +1,128 @@
+import { useRef } from 'react';
+import { X } from 'lucide-react';
+import { DEFAULT_BOARDS, type LayoutDocument } from '@/types/layout';
+import { cn } from '@/lib/cn';
+import { useLayoutStore } from '@/store/layoutStore';
+import { useSessionStore } from '@/store/sessionStore';
+
+export function SideDrawer() {
+  const open = useSessionStore((s) => s.drawerOpen);
+  const setDrawerOpen = useSessionStore((s) => s.setDrawerOpen);
+  const board = useSessionStore((s) => s.board);
+  const setBoard = useSessionStore((s) => s.setBoard);
+  const plan = useSessionStore((s) => s.plan);
+  const setPlan = useSessionStore((s) => s.setPlan);
+  const flags = useSessionStore((s) => s.flags);
+  const setFlag = useSessionStore((s) => s.setFlag);
+  const observeOnly = useSessionStore((s) => s.observeOnly);
+  const setObserveOnly = useSessionStore((s) => s.setObserveOnly);
+  const exportDoc = useLayoutStore((s) => s.exportDoc);
+  const importDoc = useLayoutStore((s) => s.importDoc);
+  const resetStarter = useLayoutStore((s) => s.resetStarter);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function downloadLayout() {
+    const blob = new Blob([JSON.stringify(exportDoc(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'command-center-layout.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function onImport(file: File | undefined) {
+    if (!file) return;
+    const text = await file.text();
+    const doc = JSON.parse(text) as LayoutDocument;
+    importDoc(doc);
+  }
+
+  return (
+    <>
+      <div
+        className={cn('fixed inset-0 z-40 bg-black/50 transition', open ? 'opacity-100' : 'pointer-events-none opacity-0')}
+        onClick={() => setDrawerOpen(false)}
+      />
+      <aside
+        className={cn(
+          'fixed bottom-0 left-0 top-0 z-50 flex w-[min(22rem,88vw)] flex-col overflow-y-auto border-r border-cyan-400/20 bg-[#070b1c] p-4 pt-[max(1rem,env(safe-area-inset-top))] shadow-glow transition-transform',
+          open ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <p className="font-display text-sm uppercase tracking-[0.22em] text-cyan-300">System</p>
+          <button type="button" className="rounded-lg p-2 hover:bg-white/5" onClick={() => setDrawerOpen(false)}>
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Boards</p>
+        <div className="mb-5 grid grid-cols-2 gap-2">
+          {DEFAULT_BOARDS.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              className={cn('hud-chip justify-center py-2', board === b.id && 'hud-chip-on')}
+              onClick={() => setBoard(b.id)}
+            >
+              {b.title}
+            </button>
+          ))}
+        </div>
+
+        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Layout JSON</p>
+        <div className="mb-5 flex flex-col gap-2">
+          <button type="button" className="hud-btn-primary" onClick={downloadLayout}>
+            Export layout
+          </button>
+          <button type="button" className="hud-btn-ghost" onClick={() => fileRef.current?.click()}>
+            Import layout
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={(e) => void onImport(e.target.files?.[0])}
+          />
+          <button
+            type="button"
+            className="hud-btn-ghost text-amber-200"
+            onClick={() => {
+              resetStarter();
+              setBoard('home');
+            }}
+          >
+            Reset starter board
+          </button>
+        </div>
+
+        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Billing stub</p>
+        <div className="mb-5 space-y-2 rounded-2xl border border-white/10 p-3 text-sm text-white/70">
+          <p>Plan: {plan === 'owner' ? 'Owner (saves locally)' : 'Guest / unpaid'}</p>
+          <button type="button" className="hud-btn-primary w-full" onClick={() => setPlan(plan === 'owner' ? 'guest' : 'owner')}>
+            {plan === 'owner' ? 'Simulate unpaid preview' : 'Upgrade to save (stub)'}
+          </button>
+        </div>
+
+        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Flags</p>
+        <label className="mb-2 flex items-center justify-between text-sm">
+          <span>Gmail stub</span>
+          <input type="checkbox" checked={flags.gmailStub} onChange={(e) => setFlag('gmailStub', e.target.checked)} />
+        </label>
+        <label className="mb-4 flex items-center justify-between text-sm">
+          <span>Trading stub</span>
+          <input type="checkbox" checked={flags.tradingStub} onChange={(e) => setFlag('tradingStub', e.target.checked)} />
+        </label>
+        <label className="mb-6 flex items-center justify-between text-sm">
+          <span>Observe Only overlay</span>
+          <input type="checkbox" checked={observeOnly} onChange={(e) => setObserveOnly(e.target.checked)} />
+        </label>
+        <p className="font-mono text-[11px] leading-relaxed text-white/40">
+          Default is Use mode. Observe Only never blocks commands. No live wallets, no fake markets, no App Store build.
+        </p>
+      </aside>
+    </>
+  );
+}
