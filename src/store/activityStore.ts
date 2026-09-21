@@ -6,7 +6,7 @@ export interface ActivityEvent {
   id: string;
   at: number;
   botId?: string;
-  kind: 'message' | 'observe' | 'system' | 'image';
+  kind: 'message' | 'observe' | 'system' | 'image' | 'video';
   text: string;
 }
 

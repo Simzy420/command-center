@@ -95,6 +95,7 @@ Adapters sit behind interfaces so mocks can be replaced without touching widgets
 | --- | --- | --- | --- |
 | Chat streaming | `ChatAdapter` | `src/adapters/chat/mock.ts` | export in `src/adapters/chat/index.ts` |
 | Image generation | `ImageGenAdapter` | OpenAI if a device key or Vercel proxy is present, else Pollinations | `src/adapters/imagegen/index.ts` (`getImageGenAdapter`) |
+| Image-to-video | Wan 2.2 Gradio client | Public Space `kulkas2pintu/wan222` (no token) | `src/adapters/wan/gradio.ts` |
 
 A real adapter must implement the same `streamReply` / `generate` signatures. Widgets already consume those modules.
 
@@ -104,6 +105,10 @@ A real adapter must implement the same `streamReply` / `generate` signatures. Wi
 - **Vercel:** set `OPENAI_API_KEY` in the project Environment Variables (server only). Set `VITE_IMAGE_PROXY=1` so the client calls `/api/generate-image` instead of sending a key from the phone. Host at the deployment root so the proxy path works.
 
 Do not put `OPENAI_API_KEY` in any `VITE_` variable or client source.
+
+### Wan 2.2 (image-to-video)
+
+Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Stills stay on OpenAI/Pollinations. Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
 
 ## Shell map
 
@@ -121,4 +126,4 @@ Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, plus 
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `chat`, `images`, `activity`, `session`, `vault.openai`. Guests keep in-memory edits only (the image vault still saves when you tap Save).
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `chat`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`. Guests keep in-memory edits only (the image vault still saves when you tap Save).
