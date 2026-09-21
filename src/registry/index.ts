@@ -69,10 +69,10 @@ registerWidget({
 registerWidget({
   type: 'imagegen',
   title: 'Image generator',
-  description: 'Prompt + generated pictures (OpenAI if a key is saved, else Pollinations).',
+  description: 'Stills (OpenAI / Pollinations) or Wan 2.2 image-to-video on Hugging Face.',
   icon: 'image',
-  defaultSize: { w: 6, h: 8 },
-  minSize: { w: 3, h: 4 },
+  defaultSize: { w: 6, h: 12 },
+  minSize: { w: 3, h: 5 },
   component: ImageGenWidget,
 });
 

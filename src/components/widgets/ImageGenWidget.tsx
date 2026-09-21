@@ -2,11 +2,40 @@ import { useState } from 'react';
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import type { GeneratedImage } from '@/adapters/imagegen';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
+import { Wan22Panel } from '@/components/widgets/Wan22Panel';
+import { cn } from '@/lib/cn';
 import { useImageStore } from '@/store/imageStore';
 import { useVaultStore } from '@/store/vaultStore';
 import type { WidgetRenderProps } from '@/registry/types';
 
 export function ImageGenWidget({ widget }: WidgetRenderProps) {
+  const model = useImageStore((s) => s.model);
+  const setModel = useImageStore((s) => s.setModel);
+
+  return (
+    <WidgetFrame widget={widget} title="Image gen">
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          className={cn('hud-btn-ghost min-h-[48px] text-sm', model === 'stills' && 'hud-btn-primary')}
+          onClick={() => setModel('stills')}
+        >
+          Stills
+        </button>
+        <button
+          type="button"
+          className={cn('hud-btn-ghost min-h-[48px] text-sm', model === 'wan22' && 'hud-btn-primary')}
+          onClick={() => setModel('wan22')}
+        >
+          Wan 2.2
+        </button>
+      </div>
+      {model === 'wan22' ? <Wan22Panel /> : <StillsPanel />}
+    </WidgetFrame>
+  );
+}
+
+function StillsPanel() {
   const images = useImageStore((s) => s.images);
   const busy = useImageStore((s) => s.busy);
   const error = useImageStore((s) => s.error);
@@ -17,7 +46,7 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
   const provider = shouldUseImageProxy() || hasKey ? 'OpenAI' : 'Pollinations';
 
   return (
-    <WidgetFrame widget={widget} title="Image gen">
+    <>
       <p className="mb-2 text-[11px] uppercase tracking-wider text-fuchsia-200/70">Agent renders · {provider}</p>
       <form
         className="mb-3 flex gap-2"
@@ -55,7 +84,7 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
           </p>
         ) : null}
       </div>
-    </WidgetFrame>
+    </>
   );
 }
 

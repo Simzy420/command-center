@@ -38,6 +38,7 @@ interface FilesState {
   openFolder: (id: string | null) => void;
   addFile: (parentId: string | null, name: string) => void;
   addFolder: (parentId: string | null, name: string) => void;
+  addMediaUrl: (prompt: string, url: string) => void;
   rename: (id: string, name: string) => void;
   remove: (id: string) => void;
 }
@@ -64,6 +65,30 @@ export const useFilesStore = create<FilesState>((set, get) => ({
         updatedAt: Date.now(),
       },
     ];
+    save(nodes);
+    set({ nodes });
+  },
+  addMediaUrl: (prompt, url) => {
+    const folderId = 'folder_media';
+    let nodes = get().nodes;
+    if (!nodes.some((n) => n.id === folderId)) {
+      nodes = [
+        ...nodes,
+        { id: folderId, name: 'Media', kind: 'folder' as const, parentId: null, updatedAt: Date.now() },
+      ];
+    }
+    const label = prompt.trim().slice(0, 48) || 'Wan 2.2 clip';
+    nodes = [
+      ...nodes,
+      {
+        id: uid('file'),
+        name: `${label}.mp4`,
+        kind: 'file' as const,
+        parentId: folderId,
+        content: url,
+        updatedAt: Date.now(),
+      },
+    ].slice(0, 400);
     save(nodes);
     set({ nodes });
   },

@@ -1,8 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText, Folder, FolderOpen } from 'lucide-react';
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
-import { useFilesStore } from '@/store/filesStore';
+import { useFilesStore, type FileNode } from '@/store/filesStore';
 import type { WidgetRenderProps } from '@/registry/types';
+
+function isVideoFile(n: FileNode): boolean {
+  if (n.kind !== 'file' || !n.content) return false;
+  return (
+    /\.(mp4|webm|mov)(\?|$)/i.test(n.name) ||
+    /\.(mp4|webm|mov)(\?|$)/i.test(n.content) ||
+    /\/gradio_api\/file/i.test(n.content)
+  );
+}
 
 export function FilesWidget({ widget }: WidgetRenderProps) {
   const nodes = useFilesStore((s) => s.nodes);
@@ -14,6 +23,16 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
   const addFolder = useFilesStore((s) => s.addFolder);
   const remove = useFilesStore((s) => s.remove);
   const [name, setName] = useState('');
+  const [playing, setPlaying] = useState<FileNode | null>(null);
+
+  useEffect(() => {
+    const folder = widget.settings?.folder;
+    if (typeof folder !== 'string') return;
+    const match = useFilesStore
+      .getState()
+      .nodes.find((n) => n.kind === 'folder' && n.name.toLowerCase() === folder.toLowerCase());
+    if (match) openFolder(match.id);
+  }, [widget.id, widget.settings?.folder, openFolder]);
 
   const current = nodes.find((n) => n.id === currentFolderId) ?? null;
   const visible = useMemo(() => {
@@ -68,7 +87,10 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
             <button
               type="button"
               className="flex-1 truncate text-left text-sm"
-              onClick={() => (n.kind === 'folder' ? openFolder(n.id) : undefined)}
+              onClick={() => {
+                if (n.kind === 'folder') openFolder(n.id);
+                else if (isVideoFile(n)) setPlaying(n);
+              }}
             >
               {n.name}
             </button>
@@ -81,6 +103,17 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
           <li className="text-sm text-white/40">Empty. Local persist only — nothing is fetched.</li>
         ) : null}
       </ul>
+      {playing?.content ? (
+        <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+          <video src={playing.content} controls playsInline className="max-h-56 w-full bg-black" />
+          <div className="flex items-center justify-between gap-2 px-2 py-1">
+            <p className="truncate text-[10px] text-white/50">{playing.name}</p>
+            <button type="button" className="text-[11px] text-white/40" onClick={() => setPlaying(null)}>
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
       <form
         className="mt-3 flex gap-2"
         onSubmit={(e) => {
