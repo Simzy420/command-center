@@ -29,6 +29,15 @@ export function writeJson(key: string, value: unknown): void {
   }
 }
 
+/** Always write (used for on-device secrets the user explicitly saved). */
+export function writeJsonForced(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(PREFIX + key, JSON.stringify(value));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export function removeJson(key: string): void {
   try {
     localStorage.removeItem(PREFIX + key);
