@@ -4,10 +4,17 @@ export interface GradientPreview {
   seed: string;
 }
 
+export interface UrlPreview {
+  kind: 'url';
+  url: string;
+}
+
+export type ImagePreview = GradientPreview | UrlPreview;
+
 export interface GeneratedImage {
   id: string;
   prompt: string;
-  preview: GradientPreview;
+  preview: ImagePreview;
   createdAt: number;
   provider: string;
 }

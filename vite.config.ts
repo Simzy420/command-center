@@ -43,6 +43,15 @@ export default defineConfig({
         navigateFallback: `${pagesBase}index.html`,
         runtimeCaching: [
           {
+            urlPattern: /^https:\/\/image\.pollinations\.ai\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pollinations-images',
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 14 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {

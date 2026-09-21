@@ -1,7 +1,10 @@
 import type { ImageGenAdapter } from './types';
-import { mockImageAdapter } from './mock';
+import { pollinationsImageAdapter } from './pollinations';
 
-/** Default adapter. Replace with a real provider that implements ImageGenAdapter. */
-export const imageGenAdapter: ImageGenAdapter = mockImageAdapter;
+/** Default: no-key Pollinations URLs that work as <img src> on the phone PWA. */
+export const imageGenAdapter: ImageGenAdapter = pollinationsImageAdapter;
 
-export type { ImageGenAdapter, GeneratedImage, ImageGenInput } from './types';
+export { mockImageAdapter } from './mock';
+export { pollinationsImageAdapter } from './pollinations';
+
+export type { ImageGenAdapter, GeneratedImage, ImageGenInput, ImagePreview } from './types';
