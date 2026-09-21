@@ -1,9 +1,11 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { DEFAULT_BOARDS, type LayoutDocument } from '@/types/layout';
 import { cn } from '@/lib/cn';
+import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useSessionStore } from '@/store/sessionStore';
+import { useVaultStore } from '@/store/vaultStore';
 
 export function SideDrawer() {
   const open = useSessionStore((s) => s.drawerOpen);
@@ -19,7 +21,14 @@ export function SideDrawer() {
   const exportDoc = useLayoutStore((s) => s.exportDoc);
   const importDoc = useLayoutStore((s) => s.importDoc);
   const resetStarter = useLayoutStore((s) => s.resetStarter);
+  const hasKey = useVaultStore((s) => s.hasKey);
+  const hint = useVaultStore((s) => s.hint);
+  const saveKey = useVaultStore((s) => s.saveKey);
+  const clearKey = useVaultStore((s) => s.clearKey);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [vaultDraft, setVaultDraft] = useState('');
+  const [vaultMsg, setVaultMsg] = useState('');
+  const proxy = shouldUseImageProxy();
 
   function downloadLayout() {
     const blob = new Blob([JSON.stringify(exportDoc(), null, 2)], { type: 'application/json' });
@@ -104,6 +113,60 @@ export function SideDrawer() {
           <button type="button" className="hud-btn-primary w-full" onClick={() => setPlan(plan === 'owner' ? 'guest' : 'owner')}>
             {plan === 'owner' ? 'Simulate unpaid preview' : 'Upgrade to save (stub)'}
           </button>
+        </div>
+
+        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Image vault</p>
+        <div className="mb-5 space-y-2 rounded-2xl border border-white/10 p-3 text-sm text-white/70">
+          <p>
+            {proxy
+              ? 'This host uses a server-side OpenAI key.'
+              : hasKey
+                ? `OpenAI key on this device ${hint}`
+                : 'No OpenAI key — Image gen uses Pollinations'}
+          </p>
+          <input
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            value={vaultDraft}
+            onChange={(e) => {
+              setVaultDraft(e.target.value);
+              setVaultMsg('');
+            }}
+            placeholder="Paste OpenAI API key"
+            className="hud-input w-full"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="hud-btn-primary flex-1"
+              onClick={() => {
+                if (saveKey(vaultDraft)) {
+                  setVaultDraft('');
+                  setVaultMsg('Saved on this device only.');
+                } else {
+                  setVaultMsg('Paste a key first.');
+                }
+              }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="hud-btn-ghost flex-1"
+              onClick={() => {
+                clearKey();
+                setVaultDraft('');
+                setVaultMsg('Cleared. Image gen falls back to Pollinations.');
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          {vaultMsg ? <p className="text-xs text-cyan-200/80">{vaultMsg}</p> : null}
+          <p className="font-mono text-[11px] leading-relaxed text-white/40">
+            Never sent to git. Stored in this browser only. Do not screenshot this field.
+          </p>
         </div>
 
         <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Flags</p>

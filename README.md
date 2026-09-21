@@ -94,9 +94,16 @@ Adapters sit behind interfaces so mocks can be replaced without touching widgets
 | Concern | Interface | Default | Swap point |
 | --- | --- | --- | --- |
 | Chat streaming | `ChatAdapter` | `src/adapters/chat/mock.ts` | export in `src/adapters/chat/index.ts` |
-| Image generation | `ImageGenAdapter` | `src/adapters/imagegen/pollinations.ts` (mock still in `mock.ts`) | export in `src/adapters/imagegen/index.ts` |
+| Image generation | `ImageGenAdapter` | OpenAI if a device key or Vercel proxy is present, else Pollinations | `src/adapters/imagegen/index.ts` (`getImageGenAdapter`) |
 
 A real adapter must implement the same `streamReply` / `generate` signatures. Widgets already consume those modules.
+
+### Image gen keys
+
+- **GitHub Pages (this PWA):** paste an OpenAI key in **System → Image vault**. It stays in this browser’s `localStorage` (`cc.v1.vault.openai`). Never commit keys. Without a key, Image gen uses Pollinations.
+- **Vercel:** set `OPENAI_API_KEY` in the project Environment Variables (server only). Set `VITE_IMAGE_PROXY=1` so the client calls `/api/generate-image` instead of sending a key from the phone. Host at the deployment root so the proxy path works.
+
+Do not put `OPENAI_API_KEY` in any `VITE_` variable or client source.
 
 ## Shell map
 
@@ -105,7 +112,7 @@ A real adapter must implement the same `streamReply` / `generate` signatures. Wi
 | Top bar (search stub, active bot, Use/Edit, Observe Only pill) | `src/components/shell/TopBar.tsx` |
 | Entity swarm + named avatars | `src/components/shell/EntitySwarm.tsx` |
 | JSON grid | `src/components/shell/GridBoard.tsx` |
-| Side drawer (boards, export/import, billing stub, flags) | `src/components/shell/SideDrawer.tsx` |
+| Side drawer (boards, export/import, billing stub, image vault, flags) | `src/components/shell/SideDrawer.tsx` |
 | Mobile dock | `src/components/shell/MobileDock.tsx` |
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
@@ -114,4 +121,4 @@ Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, plus 
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `chat`, `images`, `activity`, `session`. Guests keep in-memory edits only.
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `chat`, `images`, `activity`, `session`, `vault.openai`. Guests keep in-memory edits only (the image vault still saves when you tap Save).

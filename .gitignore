@@ -7,3 +7,6 @@ dist-ssr
 !.vscode/extensions.json
 dev-dist
 *.tsbuildinfo
+.env
+.env.*
+!.env.example

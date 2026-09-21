@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import type { GeneratedImage } from '@/adapters/imagegen';
+import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { useImageStore } from '@/store/imageStore';
+import { useVaultStore } from '@/store/vaultStore';
 import type { WidgetRenderProps } from '@/registry/types';
 
 export function ImageGenWidget({ widget }: WidgetRenderProps) {
@@ -10,11 +12,13 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
   const error = useImageStore((s) => s.error);
   const generate = useImageStore((s) => s.generate);
   const clearError = useImageStore((s) => s.clearError);
+  const hasKey = useVaultStore((s) => s.hasKey);
   const [prompt, setPrompt] = useState('');
+  const provider = shouldUseImageProxy() || hasKey ? 'OpenAI' : 'Pollinations';
 
   return (
     <WidgetFrame widget={widget} title="Image gen">
-      <p className="mb-2 text-[11px] uppercase tracking-wider text-fuchsia-200/70">Agent renders</p>
+      <p className="mb-2 text-[11px] uppercase tracking-wider text-fuchsia-200/70">Agent renders · {provider}</p>
       <form
         className="mb-3 flex gap-2"
         onSubmit={(e) => {
@@ -45,7 +49,9 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
         ))}
         {images.length === 0 && !busy ? (
           <p className="col-span-2 rounded-2xl border border-dashed border-white/15 px-3 py-8 text-center text-sm text-white/45">
-            Type a prompt and tap Gen. Pictures load from Pollinations — no API key.
+            {provider === 'OpenAI'
+              ? 'Type a prompt and tap Gen. Pictures come from OpenAI.'
+              : 'Type a prompt and tap Gen. Pictures load from Pollinations — no API key. Save an OpenAI key in System to switch.'}
           </p>
         ) : null}
       </div>

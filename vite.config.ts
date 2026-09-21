@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Project Pages path: https://simzy420.github.io/command-center/ */
-const pagesBase = '/command-center/';
+/** Project Pages path: https://simzy420.github.io/command-center/
+ *  Vercel (VERCEL=1) uses `/` so /api/generate-image works at the deployment root. */
+const pagesBase = process.env.VERCEL ? '/' : '/command-center/';
 
 export default defineConfig({
   base: pagesBase,
