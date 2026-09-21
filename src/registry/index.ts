@@ -69,7 +69,7 @@ registerWidget({
 registerWidget({
   type: 'imagegen',
   title: 'Image generator',
-  description: 'Prompt + grid via the mock image adapter.',
+  description: 'Prompt + grid of generated pictures (Pollinations, no API key).',
   icon: 'image',
   defaultSize: { w: 6, h: 8 },
   minSize: { w: 3, h: 4 },

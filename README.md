@@ -94,7 +94,7 @@ Adapters sit behind interfaces so mocks can be replaced without touching widgets
 | Concern | Interface | Default | Swap point |
 | --- | --- | --- | --- |
 | Chat streaming | `ChatAdapter` | `src/adapters/chat/mock.ts` | export in `src/adapters/chat/index.ts` |
-| Image generation | `ImageGenAdapter` | `src/adapters/imagegen/mock.ts` | export in `src/adapters/imagegen/index.ts` |
+| Image generation | `ImageGenAdapter` | `src/adapters/imagegen/pollinations.ts` (mock still in `mock.ts`) | export in `src/adapters/imagegen/index.ts` |
 
 A real adapter must implement the same `streamReply` / `generate` signatures. Widgets already consume those modules.
 

@@ -6,14 +6,17 @@ import { useActivityStore } from '@/store/activityStore';
 const KEY = 'images';
 
 function load(): GeneratedImage[] {
-  return readJson<GeneratedImage[]>(KEY, []);
+  const raw = readJson<GeneratedImage[]>(KEY, []);
+  return raw.filter((img) => img?.preview && (img.preview.kind === 'url' || img.preview.kind === 'gradient'));
 }
 
 interface ImageState {
   images: GeneratedImage[];
   busy: boolean;
+  error: string | null;
   generate: (prompt: string, count: number) => Promise<void>;
   clear: () => void;
+  clearError: () => void;
 }
 
 function save(images: GeneratedImage[]) {
@@ -23,10 +26,11 @@ function save(images: GeneratedImage[]) {
 export const useImageStore = create<ImageState>((set, get) => ({
   images: load(),
   busy: false,
+  error: null,
   generate: async (prompt, count) => {
     const trimmed = prompt.trim();
     if (!trimmed || get().busy) return;
-    set({ busy: true });
+    set({ busy: true, error: null });
     try {
       const batch = await imageGenAdapter.generate({ prompt: trimmed, count });
       const images = [...batch, ...get().images].slice(0, 48);
@@ -34,14 +38,18 @@ export const useImageStore = create<ImageState>((set, get) => ({
       set({ images });
       useActivityStore.getState().push({
         kind: 'image',
-        text: `Mock image adapter rendered ${batch.length} frame${batch.length === 1 ? '' : 's'}`,
+        text: `${imageGenAdapter.label} rendered ${batch.length} image${batch.length === 1 ? '' : 's'}`,
       });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Image generation failed.';
+      set({ error: message });
     } finally {
       set({ busy: false });
     }
   },
   clear: () => {
     save([]);
-    set({ images: [] });
+    set({ images: [], error: null });
   },
+  clearError: () => set({ error: null }),
 }));
