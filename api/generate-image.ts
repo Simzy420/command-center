@@ -1,6 +1,9 @@
-import { requestOpenAiImages, sanitizeOpenAiError } from '../src/adapters/imagegen/openaiApi';
+import { requestOpenAiImages, sanitizeOpenAiError } from '../src/adapters/imagegen/openaiApi.js';
 
-export const config = { maxDuration: 60 };
+export const config = {
+  maxDuration: 60,
+  includeFiles: 'src/adapters/imagegen/openaiApi.js',
+};
 
 type Req = {
   method?: string;
