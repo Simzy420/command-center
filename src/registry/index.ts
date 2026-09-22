@@ -28,11 +28,11 @@ export function listWidgets(flags?: FeatureFlags): WidgetDefinition[] {
 registerWidget({
   type: 'chat',
   title: 'Multi-bot chat',
-  description: 'Pick 1/2/3/all bots, separate threads, streaming mock replies.',
+  description: 'Talk to Chief of Staff (real bridge) or other bots, separate threads.',
   icon: 'message',
   defaultSize: { w: 12, h: 8 },
   minSize: { w: 4, h: 4 },
-  defaultSettings: { selectedBotIds: ['scout'] },
+  defaultSettings: { selectedBotIds: ['chief'] },
   component: ChatWidget,
 });
 

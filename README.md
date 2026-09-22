@@ -50,7 +50,7 @@ Export/import from **System** (drawer). Shape:
       "w": 12,
       "h": 8,
       "page": "home",
-      "settings": { "selectedBotIds": ["scout"] }
+      "settings": { "selectedBotIds": ["chief"] }
     }
   ],
   "updatedAt": 0
@@ -93,7 +93,7 @@ Adapters sit behind interfaces so mocks can be replaced without touching widgets
 
 | Concern | Interface | Default | Swap point |
 | --- | --- | --- | --- |
-| Chat streaming | `ChatAdapter` | `src/adapters/chat/mock.ts` | export in `src/adapters/chat/index.ts` |
+| Chat streaming | `ChatAdapter` | Chief of Staff bridge (`src/adapters/chat/bridge.ts`). Mock only if `VITE_CHAT_MOCK=1` | `src/adapters/chat/index.ts` (`getChatAdapter`) |
 | Image generation | `ImageGenAdapter` | OpenAI if a device key or Vercel proxy is present, else Pollinations | `src/adapters/imagegen/index.ts` (`getImageGenAdapter`) |
 | Image-to-video | Wan 2.2 Gradio client | Public Space `kulkas2pintu/wan222` (no token) | `src/adapters/wan/gradio.ts` |
 
@@ -110,6 +110,72 @@ Do not put `OPENAI_API_KEY` in any `VITE_` variable or client source.
 
 Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Stills stay on OpenAI/Pollinations. Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
 
+### Real chat (Chief of Staff)
+
+Casey talks to **Chief of Staff** in the Chat widget. The phone never calls Grok directly. It POSTs to **our** `/api/chat`; the server wakes the Grok Bot webhook; the agent POSTs the reply back; the widget polls until it lands.
+
+Default bot id is `chief`. Placeholder: **Message Chief of Staff…**
+
+**Local demo only:** `VITE_CHAT_MOCK=1` restores the old mock adapter. Without that flag and without a Chat API base, the widget shows a clear error — no fake witty lines.
+
+#### 1. Deploy the API on Vercel
+
+This repo already has `api/generate-image.ts` and `api/chat/`. Host the project on Vercel (root deploy so `/api/chat` works). Set these **server** env vars (Project Settings → Environment Variables). Never commit them.
+
+| Env | Purpose |
+| --- | --- |
+| `GROK_WEBHOOK_URL` | Incoming webhook URL for the Grok Bot / Chief of Staff routine |
+| `GROK_WEBHOOK_SENDER_KEY` | Optional sender secret. Sent as `Authorization: Bearer …`, `X-Webhook-Key`, and `?key=` |
+| `CHAT_BRIDGE_SECRET` | Bearer token the agent must send on `POST /api/chat/reply` |
+| `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Preferred session store (Upstash Redis REST, no extra npm deps) |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Alternative: Vercel KV (same REST protocol) |
+| `CHAT_GIST_ID` + `GITHUB_TOKEN` | Fallback store if Redis is not set (gist needs `gist` scope) |
+
+If none of the stores are set, the function uses an in-memory `Map`. That is **not** production-safe: a cold start or a second instance will miss replies. Use Upstash (or a gist) before you rely on this from the iPhone.
+
+#### 2. Grok Bot webhook routine
+
+Create a Grok Bot that receives the webhook POST. Body is JSON:
+
+```json
+{
+  "sessionId": "uuid",
+  "clientMsgId": "uuid",
+  "botId": "chief",
+  "botName": "Chief of Staff",
+  "text": "Casey's message",
+  "history": [],
+  "replyUrl": "https://YOUR_APP.vercel.app/api/chat/reply"
+}
+```
+
+When the bot has an answer, it must POST to `replyUrl` (or `/api/chat/reply`):
+
+```http
+POST /api/chat/reply
+Authorization: Bearer ${CHAT_BRIDGE_SECRET}
+Content-Type: application/json
+
+{"sessionId":"uuid","clientMsgId":"uuid","botId":"chief","text":"…","status":"final"}
+```
+
+`status` may be `"partial"` while streaming, then `"final"`. Paste the webhook URL and sender key into **Vercel env only**, not into the public repo or System drawer.
+
+#### 3. Point the phone at the API
+
+- **App on Vercel** (`*.vercel.app`): same origin, no extra client config.
+- **GitHub Pages** (`https://simzy420.github.io/command-center/`): either set `VITE_CHAT_API_BASE=https://YOUR_APP.vercel.app` on the Pages build, **or** paste that origin in **System → Chat bridge** (stored as `cc.v1.vault.chatApiBase` on device).
+
+The client only talks to `/api/chat`. Webhook secrets stay on the server.
+
+#### API
+
+- `POST /api/chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok: true, clientMsgId }` and forwards to `GROK_WEBHOOK_URL`
+- `GET /api/chat?sessionId=` → `{ messages: [{ id, role, botId, text, clientMsgId, createdAt, status }] }`
+- `POST /api/chat/reply` Bearer `CHAT_BRIDGE_SECRET` → `{ sessionId, clientMsgId, botId, text, status: "partial"|"final" }`
+
+Text max 8000 characters. `sessionId` must be a UUID.
+
 ## Shell map
 
 | Piece | Where |
@@ -117,7 +183,7 @@ Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Still
 | Top bar (search stub, active bot, Use/Edit, Observe Only pill) | `src/components/shell/TopBar.tsx` |
 | Entity swarm + named avatars | `src/components/shell/EntitySwarm.tsx` |
 | JSON grid | `src/components/shell/GridBoard.tsx` |
-| Side drawer (boards, export/import, billing stub, image vault, flags) | `src/components/shell/SideDrawer.tsx` |
+| Side drawer (boards, export/import, billing stub, image vault, chat bridge, flags) | `src/components/shell/SideDrawer.tsx` |
 | Mobile dock | `src/components/shell/MobileDock.tsx` |
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
@@ -126,4 +192,4 @@ Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, plus 
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `chat`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`. Guests keep in-memory edits only (the image vault still saves when you tap Save).
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `chat`, `chatSession`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save).

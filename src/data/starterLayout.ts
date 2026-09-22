@@ -11,7 +11,7 @@ export function createStarterLayout(): LayoutDocument {
       w: 12,
       h: 8,
       page: 'home',
-      settings: { selectedBotIds: ['scout', 'pulse', 'chief'] },
+      settings: { selectedBotIds: ['chief'] },
     },
     {
       id: uid('w'),
@@ -81,7 +81,7 @@ export function createStarterLayout(): LayoutDocument {
       w: 12,
       h: 10,
       page: 'bots',
-      settings: { selectedBotIds: ['scout', 'sniper', 'pulse', 'ledger', 'shield', 'liquid98', 'chief'] },
+      settings: { selectedBotIds: ['chief', 'scout', 'sniper', 'pulse', 'ledger', 'shield', 'liquid98'] },
     },
     {
       id: uid('w'),

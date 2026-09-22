@@ -15,4 +15,4 @@ export function getBot(id: string): Bot | undefined {
   return BOT_ROSTER.find((b) => b.id === id);
 }
 
-export const DEFAULT_BOT_ID = 'scout';
+export const DEFAULT_BOT_ID = 'chief';
