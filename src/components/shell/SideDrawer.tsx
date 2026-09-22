@@ -2,7 +2,9 @@ import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { DEFAULT_BOARDS, type LayoutDocument } from '@/types/layout';
 import { cn } from '@/lib/cn';
+import { DEFAULT_CHAT_API_BASE, isChatBridgeConfigured, resolveChatApiBase } from '@/adapters/chat';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
+import { useChatStore } from '@/store/chatStore';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useVaultStore } from '@/store/vaultStore';
@@ -25,10 +27,26 @@ export function SideDrawer() {
   const hint = useVaultStore((s) => s.hint);
   const saveKey = useVaultStore((s) => s.saveKey);
   const clearKey = useVaultStore((s) => s.clearKey);
+  const chatApiBase = useVaultStore((s) => s.chatApiBase);
+  const saveChatApiBase = useVaultStore((s) => s.saveChatApiBase);
+  const clearChatApiBase = useVaultStore((s) => s.clearChatApiBase);
+  const chatStatus = useChatStore((s) => s.status);
+  const chatError = useChatStore((s) => s.lastError);
   const fileRef = useRef<HTMLInputElement>(null);
   const [vaultDraft, setVaultDraft] = useState('');
   const [vaultMsg, setVaultMsg] = useState('');
+  const [chatDraft, setChatDraft] = useState('');
+  const [chatMsg, setChatMsg] = useState('');
   const proxy = shouldUseImageProxy();
+  const bridgeConfigured = isChatBridgeConfigured();
+  const resolvedChatBase = resolveChatApiBase();
+  const chatStatusLine = !bridgeConfigured
+    ? 'Error — Chat API base missing'
+    : chatStatus === 'waiting'
+      ? 'Waiting for reply'
+      : chatStatus === 'error'
+        ? 'Error'
+        : 'Connected';
 
   function downloadLayout() {
     const blob = new Blob([JSON.stringify(exportDoc(), null, 2)], { type: 'application/json' });
@@ -167,6 +185,78 @@ export function SideDrawer() {
           <p className="font-mono text-[11px] leading-relaxed text-white/40">
             Never sent to git. Stored in this browser only. Do not screenshot this field.
           </p>
+        </div>
+
+        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Chat bridge</p>
+        <div className="mb-5 space-y-2 rounded-2xl border border-white/10 p-3 text-sm text-white/70">
+          <p>
+            Status:{' '}
+            <span className={cn(bridgeConfigured && chatStatus !== 'error' ? 'text-cyan-100' : 'text-rose-200')}>
+              {chatStatusLine}
+            </span>
+          </p>
+          {resolvedChatBase ? (
+            <p className="font-mono text-[11px] break-all text-white/45">{resolvedChatBase}</p>
+          ) : (
+            <p className="text-xs text-white/45">No API base — the live Space is {DEFAULT_CHAT_API_BASE}.</p>
+          )}
+          {chatError ? <p className="text-xs text-rose-200">{chatError}</p> : null}
+          <p className="text-xs leading-relaxed text-white/55">
+            Chief of Staff answers here for real via the live Hugging Face Space{' '}
+            <span className="font-mono text-white/70">{DEFAULT_CHAT_API_BASE}</span>
+            {' '}(
+            <a
+              className="text-cyan-200/80 underline decoration-cyan-400/30"
+              href="https://huggingface.co/spaces/Simzy/command-center-chat"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Simzy/command-center-chat
+            </a>
+            ). You do not have to type that URL — empty vault falls back to it. Set GROK_WEBHOOK_URL and
+            GROK_WEBHOOK_SENDER_KEY on the Space, not here. Optional override below. Never paste webhook secrets.
+          </p>
+          <input
+            type="url"
+            autoComplete="off"
+            spellCheck={false}
+            value={chatDraft}
+            onChange={(e) => {
+              setChatDraft(e.target.value);
+              setChatMsg('');
+            }}
+            placeholder={chatApiBase || DEFAULT_CHAT_API_BASE}
+            className="hud-input w-full"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="hud-btn-primary flex-1"
+              onClick={() => {
+                if (saveChatApiBase(chatDraft)) {
+                  setChatDraft('');
+                  setChatMsg('Saved on this device only.');
+                  useChatStore.getState().clearError();
+                } else {
+                  setChatMsg('Paste the Hugging Face Space URL first.');
+                }
+              }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              className="hud-btn-ghost flex-1"
+              onClick={() => {
+                clearChatApiBase();
+                setChatDraft('');
+                setChatMsg(`Cleared override. Using ${DEFAULT_CHAT_API_BASE}.`);
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          {chatMsg ? <p className="text-xs text-cyan-200/80">{chatMsg}</p> : null}
         </div>
 
         <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Flags</p>

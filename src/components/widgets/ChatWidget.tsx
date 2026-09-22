@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BOT_ROSTER } from '@/bots/roster';
+import { BOT_ROSTER, DEFAULT_BOT_ID } from '@/bots/roster';
 import { BotAvatar } from '@/components/avatars/BotAvatar';
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import { cn } from '@/lib/cn';
@@ -15,6 +15,7 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
   const threads = useChatStore((s) => s.threads);
   const streaming = useChatStore((s) => s.streaming);
   const send = useChatStore((s) => s.send);
+  const errors = useChatStore((s) => s.errors);
   const events = useActivityStore((s) => s.events);
   const activeBotId = useSessionStore((s) => s.activeBotId);
   const updateSettings = useLayoutStore((s) => s.updateSettings);
@@ -25,13 +26,19 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
     return [activeBotId];
   }, [widget.settings.selectedBotIds, activeBotId]);
 
-  const [focusBot, setFocusBot] = useState(selected[0] ?? activeBotId);
+  const [focusBot, setFocusBot] = useState(
+    selected.includes(DEFAULT_BOT_ID) ? DEFAULT_BOT_ID : (selected[0] ?? activeBotId),
+  );
   const [tab, setTab] = useState<Tab>('thread');
   const [draft, setDraft] = useState('');
 
   const visibleBots = BOT_ROSTER.filter((b) => selected.includes(b.id));
   const current = visibleBots.find((b) => b.id === focusBot) ?? visibleBots[0] ?? BOT_ROSTER[0];
   const messages = threads[current.id] ?? [];
+  const waiting = Boolean(streaming[current.id]);
+  const error = errors[current.id];
+  const placeholder =
+    current.id === 'chief' ? 'Message Chief of Staff…' : `Command ${current.name}…`;
 
   function toggleBot(id: string) {
     const set = new Set(selected);
@@ -47,8 +54,8 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
   }
 
   function pickCount(n: number | 'all') {
-    const ids =
-      n === 'all' ? BOT_ROSTER.map((b) => b.id) : BOT_ROSTER.slice(0, n).map((b) => b.id);
+    const rest = BOT_ROSTER.filter((b) => b.id !== DEFAULT_BOT_ID).map((b) => b.id);
+    const ids = n === 'all' ? [DEFAULT_BOT_ID, ...rest] : [DEFAULT_BOT_ID, ...rest].slice(0, n);
     updateSettings(widget.id, { selectedBotIds: ids });
     setFocusBot(ids.includes(focusBot) ? focusBot : ids[0]);
   }
@@ -74,11 +81,12 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={`Command ${current.name}…`}
+            placeholder={placeholder}
             className="hud-input flex-1"
+            disabled={waiting}
           />
-          <button type="submit" className="hud-btn-primary px-3">
-            Send
+          <button type="submit" className="hud-btn-primary px-3 disabled:opacity-50" disabled={waiting || !draft.trim()}>
+            {waiting ? '…' : 'Send'}
           </button>
         </form>
       }
@@ -140,8 +148,16 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
         </ul>
       ) : (
         <ul className="space-y-2">
-          {messages.length === 0 ? (
-            <li className="text-sm text-white/45">Separate thread for {current.name}. Command the bot — this is Use mode.</li>
+          {waiting ? (
+            <li className="text-xs uppercase tracking-wider text-cyan-200/80">Waiting for reply…</li>
+          ) : null}
+          {error && !waiting ? (
+            <li className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</li>
+          ) : null}
+          {messages.length === 0 && !waiting && !error ? (
+            <li className="text-sm text-white/45">
+              Separate thread for {current.name}. Casey&apos;s main conversation is with Chief of Staff.
+            </li>
           ) : null}
           {messages.map((m) => (
             <li
@@ -151,7 +167,7 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
                 m.role === 'user' ? 'ml-6 bg-cyan-400/10 text-cyan-50' : 'mr-4 bg-fuchsia-500/10 text-fuchsia-50',
               )}
             >
-              {m.text || (streaming[current.id] ? '▍' : '')}
+              {m.text || (waiting ? '▍' : '')}
             </li>
           ))}
         </ul>
