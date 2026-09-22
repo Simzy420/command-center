@@ -4,11 +4,8 @@ import { FilesWidget } from '@/components/widgets/FilesWidget';
 import { TodoWidget } from '@/components/widgets/TodoWidget';
 import { LinksWidget } from '@/components/widgets/LinksWidget';
 import { ImageGenWidget } from '@/components/widgets/ImageGenWidget';
-import {
-  GmailStubWidget,
-  TradingStubWidget,
-  WatchlistWidget,
-} from '@/components/widgets/PlaceholderWidgets';
+import { WatchlistWidget } from '@/components/widgets/WatchlistWidget';
+import { GmailStubWidget, TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
 import type { FeatureFlags } from '@/store/sessionStore';
 
 const registry = new Map<string, WidgetDefinition>();
@@ -79,7 +76,7 @@ registerWidget({
 registerWidget({
   type: 'watchlist',
   title: 'Watchlist',
-  description: 'Connect data source only — no fake candles.',
+  description: 'Live CoinGecko USD price and 24h change. No candles.',
   icon: 'watch',
   defaultSize: { w: 6, h: 6 },
   minSize: { w: 3, h: 4 },
