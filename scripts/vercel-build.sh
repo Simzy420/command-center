@@ -9,6 +9,10 @@ echo "CC_START=$START"
 echo "CC_ROOT=$ROOT"
 cd "$ROOT"
 npm run build
+# Node traces api/ before the static build. package.json "vercel-build"
+# emits the JS module that import resolves, and this repeats it here so the
+# file exists even if only the project build command runs.
+npm run vercel-build
 if [ "$START" != "$ROOT" ]; then
   mkdir -p "$START/dist"
   cp -R "$ROOT/dist/." "$START/dist/"

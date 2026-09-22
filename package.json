@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/prepare-vercel-output.mjs",
+    "vercel-build": "esbuild src/adapters/imagegen/openaiApi.ts --platform=node --format=esm --outfile=src/adapters/imagegen/openaiApi.js",
     "preview": "vite preview"
   },
   "dependencies": {
