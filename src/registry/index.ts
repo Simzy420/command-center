@@ -36,9 +36,9 @@ registerWidget({
 registerWidget({
   type: 'files',
   title: 'Files',
-  description: 'Projects / Trades / Builds / Media / Backtests — local persist.',
+  description: 'Open, edit, and close notes plus Media from image/video gen — local persist.',
   icon: 'files',
-  defaultSize: { w: 6, h: 7 },
+  defaultSize: { w: 6, h: 8 },
   minSize: { w: 3, h: 4 },
   component: FilesWidget,
 });

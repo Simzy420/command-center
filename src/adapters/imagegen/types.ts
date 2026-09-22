@@ -24,7 +24,6 @@ export interface ImageGenInput {
   count: number;
 }
 
-/** Swap this implementation for a real provider later. */
 export interface ImageGenAdapter {
   id: string;
   label: string;
