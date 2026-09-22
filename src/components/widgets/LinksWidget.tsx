@@ -15,11 +15,32 @@ export function LinksWidget({ widget }: WidgetRenderProps) {
   const tiles = useLinksStore((s) => s.tiles);
   const add = useLinksStore((s) => s.add);
   const remove = useLinksStore((s) => s.remove);
+  const saveNotice = useLinksStore((s) => s.saveNotice);
+  const saveError = useLinksStore((s) => s.saveError);
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
 
   return (
-    <WidgetFrame widget={widget} title="Links">
+    <WidgetFrame
+      widget={widget}
+      title="Links"
+      footer={
+        <div>
+          {saveError ? (
+            <p className="mb-1 text-xs text-rose-300" role="alert">
+              {saveError}
+            </p>
+          ) : saveNotice === 'saved' ? (
+            <p className="mb-1 text-xs text-cyan-200" role="status">
+              Saved
+            </p>
+          ) : null}
+          <p className="text-[11px] leading-snug text-white/45">
+            Saved on this device and browser. They don&apos;t sync between github.io and the Vercel site.
+          </p>
+        </div>
+      }
+    >
       <div className="grid grid-cols-2 gap-2">
         {tiles.map((tile) => (
           <a
