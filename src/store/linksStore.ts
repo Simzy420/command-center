@@ -121,8 +121,15 @@ export const useLinksStore = create<LinksState>((set, get) => ({
     if (writesInFlight > 0 || dirty) return;
     const current = get().tiles;
 
+    // A remount or storage race can leave memory empty while disk still has the list.
+    if (current.length === 0 && snapshot.tiles.length > 0) {
+      set({ tiles: snapshot.tiles });
+      lastAckedAt = Math.max(lastAckedAt, snapshot.updatedAt);
+      hydrated = true;
+      return;
+    }
+
     if (!edited) {
-      // Before this session edits anything, keep whichever store has the surviving copy.
       // An empty read must not clear tiles already loaded from the other store.
       if (snapshot.tiles.length === 0 && current.length > 0) {
         persist(current, true);
@@ -143,7 +150,7 @@ export const useLinksStore = create<LinksState>((set, get) => ({
       return;
     }
 
-    if (!sameLinkTiles(current, snapshot.tiles)) persist(current, true);
+    if (current.length > 0 && !sameLinkTiles(current, snapshot.tiles)) persist(current, true);
     hydrated = true;
   },
 }));
