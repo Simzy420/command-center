@@ -23,7 +23,7 @@ Live (GitHub Pages): https://simzy420.github.io/command-center/
 - Avatars use the three ref styles: cyan ringed sphere, purple energy pyramid, fragmented lightning cube.
 - 2-column grid on phone, 12-column on desktop.
 - Long-press / drag from the **widget header in Edit mode**. Use mode does not capture drag, so the page scrolls normally.
-- No fake prices, charts, EMAs, P&L, or emails. Watchlist (and optional Gmail/Trading stubs) show **Connect data source**.
+- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. Optional Gmail/Trading stubs still show **Connect data source**.
 - No App Store binary, no unrestricted iframes, no live wallet signing, no fake live trading, no real payment backend.
 - Owner plan persists to `localStorage`. Guest/unpaid sees **Preview mode — upgrade to save** (billing is a stub in System).
 
@@ -96,8 +96,9 @@ Adapters sit behind interfaces so mocks can be replaced without touching widgets
 | Chat streaming | `ChatAdapter` | Chief of Staff bridge (`src/adapters/chat/bridge.ts`). Mock only if `VITE_CHAT_MOCK=1` | `src/adapters/chat/index.ts` (`getChatAdapter`) |
 | Image generation | `ImageGenAdapter` | OpenAI if a device key or Vercel proxy is present, else Pollinations | `src/adapters/imagegen/index.ts` (`getImageGenAdapter`) |
 | Image-to-video | Wan 2.2 Gradio client | Public Space `kulkas2pintu/wan222` (no token) | `src/adapters/wan/gradio.ts` |
+| Watchlist quotes | `MarketAdapter` | CoinGecko public `simple/price` (no key, no mock) | `src/adapters/market/index.ts` (`getMarketAdapter`) |
 
-A real adapter must implement the same `streamReply` / `generate` signatures. Widgets already consume those modules.
+A replacement adapter must implement the same interface as the one it swaps. Widgets already consume those modules.
 
 ### Image gen keys
 
@@ -105,6 +106,20 @@ A real adapter must implement the same `streamReply` / `generate` signatures. Wi
 - **Vercel:** set `OPENAI_API_KEY` in the project Environment Variables (server only). Set `VITE_IMAGE_PROXY=1` so the client calls `/api/generate-image` instead of sending a key from the phone. Host at the deployment root so the proxy path works.
 
 Do not put `OPENAI_API_KEY` in any `VITE_` variable or client source.
+
+### Watchlist (CoinGecko)
+
+The watchlist calls the public CoinGecko API from the phone. No API key. No mock prices, candles, EMAs, or P&L.
+
+```
+https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,hyperliquid&vs_currencies=usd&include_24hr_change=true
+```
+
+CoinGecko sends `Access-Control-Allow-Origin: *`, so GitHub Pages calls it directly. A fresh browser with no `cc.v1.watchlist` key starts on BTC, ETH, SOL, and HYPE (`hyperliquid`). Add and remove persist in that key. The empty state appears only after every symbol is removed.
+
+Unknown tickers resolve through `/search` (highest market-cap exact symbol match). Quotes refresh about every 60 seconds and from the refresh button. A failed fetch shows the CoinGecko error and keeps the last good quotes on screen. Those quotes are not written to `localStorage`.
+
+Optional override: `VITE_MARKET_API_BASE` — a root that serves the same `/simple/price` and `/search` paths. Leave it unset for the public API.
 
 ### Wan 2.2 (image-to-video)
 
@@ -204,4 +219,4 @@ Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, plus 
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `chat`, `chatSession`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save).
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). Watchlist prices are not stored — only the symbol list.

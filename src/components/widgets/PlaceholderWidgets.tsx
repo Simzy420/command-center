@@ -1,14 +1,6 @@
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import type { WidgetRenderProps } from '@/registry/types';
 
-export function WatchlistWidget({ widget }: WidgetRenderProps) {
-  return (
-    <WidgetFrame widget={widget} title="Watchlist" badge="EMPTY">
-      <EmptyDataSource label="Watchlist" detail="No fake prices, candles, EMAs, or P&L. Plug a real market API into this widget later." />
-    </WidgetFrame>
-  );
-}
-
 export function GmailStubWidget({ widget }: WidgetRenderProps) {
   return (
     <WidgetFrame widget={widget} title="Gmail" badge="FLAG">

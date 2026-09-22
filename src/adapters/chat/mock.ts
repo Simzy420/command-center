@@ -2,7 +2,7 @@ import type { ChatAdapter, ChatStreamInput } from './types';
 
 const LINES: Record<string, string[]> = {
   scout: [
-    'Recon sweep complete. Layout grid is live — no live market feeds attached.',
+    'Recon sweep complete. Layout grid is live. Watchlist prices come from CoinGecko, not from me.',
     'I can watch a widget region, but I will not invent prices or mail.',
     'Point me at a board and I will keep a running activity log.',
   ],
@@ -13,7 +13,7 @@ const LINES: Record<string, string[]> = {
   ],
   pulse: [
     'Signal received. Streaming a mock token feed so the UI can prove itself.',
-    'Pulse check: chat adapter is mock, image adapter is mock, watchlist is empty on purpose.',
+    'Pulse check: this chat stream is mock. Watchlist quotes are live CoinGecko, not this feed.',
     'When you plug in a real provider, this stream interface stays the same.',
   ],
   ledger: [
