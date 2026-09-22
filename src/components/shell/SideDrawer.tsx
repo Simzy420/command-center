@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { DEFAULT_BOARDS, type LayoutDocument } from '@/types/layout';
 import { cn } from '@/lib/cn';
-import { isChatBridgeConfigured, resolveChatApiBase } from '@/adapters/chat';
+import { DEFAULT_CHAT_API_BASE, isChatBridgeConfigured, resolveChatApiBase } from '@/adapters/chat';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { useChatStore } from '@/store/chatStore';
 import { useLayoutStore } from '@/store/layoutStore';
@@ -198,13 +198,23 @@ export function SideDrawer() {
           {resolvedChatBase ? (
             <p className="font-mono text-[11px] break-all text-white/45">{resolvedChatBase}</p>
           ) : (
-            <p className="text-xs text-white/45">No API base — paste your Hugging Face Space URL (…hf.space).</p>
+            <p className="text-xs text-white/45">No API base — the live Space is {DEFAULT_CHAT_API_BASE}.</p>
           )}
           {chatError ? <p className="text-xs text-rose-200">{chatError}</p> : null}
           <p className="text-xs leading-relaxed text-white/55">
-            Chief of Staff answers here for real. Create a CPU basic Hugging Face Space from spaces/command-center-chat,
-            set GROK_WEBHOOK_URL, GROK_WEBHOOK_SENDER_KEY, and CHAT_BRIDGE_SECRET on the Space, then paste
-            https://you-command-center-chat.hf.space. Never paste webhook secrets here.
+            Chief of Staff answers here for real via the live Hugging Face Space{' '}
+            <span className="font-mono text-white/70">{DEFAULT_CHAT_API_BASE}</span>
+            {' '}(
+            <a
+              className="text-cyan-200/80 underline decoration-cyan-400/30"
+              href="https://huggingface.co/spaces/Simzy/command-center-chat"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Simzy/command-center-chat
+            </a>
+            ). You do not have to type that URL — empty vault falls back to it. Set GROK_WEBHOOK_URL and
+            GROK_WEBHOOK_SENDER_KEY on the Space, not here. Optional override below. Never paste webhook secrets.
           </p>
           <input
             type="url"
@@ -215,7 +225,7 @@ export function SideDrawer() {
               setChatDraft(e.target.value);
               setChatMsg('');
             }}
-            placeholder={chatApiBase || 'https://you-command-center-chat.hf.space'}
+            placeholder={chatApiBase || DEFAULT_CHAT_API_BASE}
             className="hud-input w-full"
           />
           <div className="flex gap-2">
@@ -240,7 +250,7 @@ export function SideDrawer() {
               onClick={() => {
                 clearChatApiBase();
                 setChatDraft('');
-                setChatMsg('Cleared Chat API base.');
+                setChatMsg(`Cleared override. Using ${DEFAULT_CHAT_API_BASE}.`);
               }}
             >
               Clear

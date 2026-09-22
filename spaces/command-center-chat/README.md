@@ -16,33 +16,36 @@ CPU **basic** Space — **not** ZeroGPU. This is a tiny FastAPI webhook mailbox 
 
 Casey pays for Hugging Face. Put secrets on **this Space**, never in the public Command Center repo.
 
-## Create the Space
+## Production Space (already live)
 
-1. On [huggingface.co/new-space](https://huggingface.co/new-space) create a Space:
-   - **SDK:** Docker
-   - **Hardware:** CPU basic (free or paid CPU — do **not** pick ZeroGPU / A100)
-   - Name e.g. `command-center-chat` → URL like `https://YOURUSER-command-center-chat.hf.space`
-2. Copy every file in this folder (`Dockerfile`, `requirements.txt`, `main.py`, this `README.md`) into the Space repo root. Or duplicate an existing Space that already has these files.
-3. **Settings → Secrets** (runtime env, not git):
+Do not redeploy to ship the phone client. Production is:
+
+- App: https://simzy-command-center-chat.hf.space
+- Page: https://huggingface.co/spaces/Simzy/command-center-chat
+
+Casey sets **`GROK_WEBHOOK_URL`** and **`GROK_WEBHOOK_SENDER_KEY`** on that Space (plus `CHAT_BRIDGE_SECRET` for agent replies). The Command Center PWA defaults to that origin; empty vault on the phone already uses it.
+
+This folder is a reference copy of the bridge app.
+
+## Secrets
+
+**Settings → Secrets** (runtime env, not git):
 
 | Secret | Purpose |
 | --- | --- |
 | `GROK_WEBHOOK_URL` | Incoming webhook for the Grok Bot “Command Center chat” routine |
 | `GROK_WEBHOOK_SENDER_KEY` | Sender key from that routine (`Authorization: Bearer` + `X-Webhook-Key` + `?key=`) |
-| `CHAT_BRIDGE_SECRET` | Bearer token the agent must send on `POST /chat/reply` |
-
-4. Optional: attach persistent storage / a volume at `/data` so sessions survive restarts. Without it, messages live under `/data/chat-sessions` if that path is writable, else `/tmp/chat-sessions` (lost on sleep).
-5. In Command Center on the phone: **System → Chat bridge** → paste `https://YOURUSER-command-center-chat.hf.space` (no trailing slash).
+| `CHAT_BRIDGE_SECRET` | Bearer token the agent must send on `POST /api/chat/reply` |
 
 Copy the Grok Bot webhook URL and sender key into the Space secrets. Do **not** paste them into Command Center.
 
-## API
+## API (live Space)
 
-- `GET /` — `{ ok, service }` health
-- `POST /chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok, clientMsgId }` and forwards JSON to `GROK_WEBHOOK_URL`
-- `GET /chat?sessionId=` → `{ messages: [...] }`
-- `POST /chat/reply` `Authorization: Bearer ${CHAT_BRIDGE_SECRET}` `{ sessionId, clientMsgId, botId, text, status: "partial"|"final" }`
+- `GET /health` — `{ ok: true }`
+- `POST /api/chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok, clientMsgId }` and forwards JSON to `GROK_WEBHOOK_URL`
+- `GET /api/chat?sessionId=` → `{ messages: [...] }`
+- `POST /api/chat/reply` `Authorization: Bearer ${CHAT_BRIDGE_SECRET}` `{ sessionId, clientMsgId, botId, text, status: "partial"|"final" }`
 
 CORS allows `https://simzy420.github.io` and localhost. Text max 8000. `sessionId` must be a UUID.
 
-The webhook body includes `replyUrl` pointing at this Space’s `/chat/reply`.
+The webhook body includes `replyUrl` pointing at this Space’s `/api/chat/reply`.

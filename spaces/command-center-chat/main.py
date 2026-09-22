@@ -167,6 +167,7 @@ async def forward_webhook(payload: dict[str, Any]) -> None:
 
 
 @app.get("/")
+@app.get("/health")
 def health() -> dict[str, Any]:
     return {
         "ok": True,
@@ -177,6 +178,7 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/chat")
+@app.get("/api/chat")
 def get_chat(sessionId: str = Query(..., min_length=8)) -> dict[str, Any]:
     if not is_session_id(sessionId):
         raise HTTPException(400, "sessionId must be a UUID.")
@@ -184,6 +186,7 @@ def get_chat(sessionId: str = Query(..., min_length=8)) -> dict[str, Any]:
 
 
 @app.post("/chat")
+@app.post("/api/chat")
 async def post_chat(body: ChatIn, request: Request) -> dict[str, Any]:
     session_id = body.sessionId.strip()
     client_msg_id = body.clientMsgId.strip()
@@ -223,7 +226,7 @@ async def post_chat(body: ChatIn, request: Request) -> dict[str, Any]:
             "botName": bot_name,
             "text": text,
             "history": history,
-            "replyUrl": f"{origin}/chat/reply",
+            "replyUrl": f"{origin}/api/chat/reply",
         }
     )
 
@@ -236,6 +239,7 @@ async def post_chat(body: ChatIn, request: Request) -> dict[str, Any]:
 
 
 @app.post("/chat/reply")
+@app.post("/api/chat/reply")
 def post_reply(body: ReplyIn, authorization: str | None = Header(default=None)) -> dict[str, Any]:
     secret = (os.environ.get("CHAT_BRIDGE_SECRET") or "").strip()
     if not secret:

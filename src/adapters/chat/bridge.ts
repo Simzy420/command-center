@@ -20,11 +20,16 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Hugging Face Space origin, no trailing slash. Empty until Casey pastes it. */
+/** Production chat bridge — Hugging Face Space, already live. */
+export const DEFAULT_CHAT_API_BASE = 'https://simzy-command-center-chat.hf.space';
+
+/** Hugging Face Space origin, no trailing slash. Vault → env → live Space. */
 export function resolveChatApiBase(): string {
   const vault = readVaultChatApiBase().replace(/\/$/, '');
   if (vault) return vault;
-  return (import.meta.env.VITE_CHAT_API_BASE ?? '').trim().replace(/\/$/, '');
+  const env = (import.meta.env.VITE_CHAT_API_BASE ?? '').trim().replace(/\/$/, '');
+  if (env) return env;
+  return DEFAULT_CHAT_API_BASE;
 }
 
 export function isChatBridgeConfigured(): boolean {
@@ -47,7 +52,7 @@ export function getChatSessionId(): string {
 
 function missingBridgeError(): Error {
   return new Error(
-    'Chat bridge URL is missing. Create the CPU Hugging Face Space from spaces/command-center-chat, then paste its URL in System → Chat bridge (example https://YOU-command-center-chat.hf.space). Chief of Staff cannot answer until that URL is set — no mock replies.',
+    `Chat bridge URL is missing. Default is ${DEFAULT_CHAT_API_BASE}. Set it in System → Chat bridge if you overrode it. Chief of Staff cannot answer until that URL is set — no mock replies.`,
   );
 }
 
@@ -90,7 +95,7 @@ export const bridgeChatAdapter: ChatAdapter = {
 
     let post: Response;
     try {
-      post = await fetch(chatApiUrl('/chat'), {
+      post = await fetch(chatApiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,7 +109,7 @@ export const bridgeChatAdapter: ChatAdapter = {
       });
     } catch {
       throw new Error(
-        'Could not reach the Hugging Face Space. Check Chat API base in System (https://YOU-command-center-chat.hf.space).',
+        `Could not reach the Hugging Face Space. Check Chat API base in System (${DEFAULT_CHAT_API_BASE}).`,
       );
     }
     if (!post.ok) throw new Error(await readError(post));
@@ -117,7 +122,7 @@ export const bridgeChatAdapter: ChatAdapter = {
       await sleep(POLL_MS);
       let poll: Response;
       try {
-        poll = await fetch(`${chatApiUrl('/chat')}?sessionId=${encodeURIComponent(sessionId)}`);
+        poll = await fetch(`${chatApiUrl('/api/chat')}?sessionId=${encodeURIComponent(sessionId)}`);
       } catch {
         continue;
       }

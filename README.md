@@ -112,32 +112,32 @@ Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Still
 
 ### Real chat (Chief of Staff)
 
-Casey talks to **Chief of Staff** in the Chat widget. The phone never calls Grok directly. It POSTs to a **Hugging Face Space** (`POST /chat`); the Space wakes the Grok Bot webhook; the agent POSTs the reply back to the Space; the widget polls until it lands.
+Casey talks to **Chief of Staff** in the Chat widget. The phone never calls Grok directly. It POSTs to the **Hugging Face Space**; the Space wakes the Grok Bot webhook; the agent POSTs the reply back to the Space; the widget polls until it lands.
 
-Default bot id is `chief`. Placeholder: **Message Chief of Staff…**
+Default bot id is `chief`. Placeholder: **Message Chief of Staff…** Default adapter is the real bridge (`src/adapters/chat/bridge.ts`). Mock only if `VITE_CHAT_MOCK=1`.
 
-Production host is a **CPU basic** Hugging Face Space — **not Vercel, not ZeroGPU**. `api/generate-image.ts` remains for an optional later OpenAI stills proxy; chat does not use it.
+**Production host is the Hugging Face Space** — **not Vercel, not ZeroGPU**. Vercel is unused for chat. `api/generate-image.ts` remains only as an optional later OpenAI stills proxy.
 
-**Local demo only:** `VITE_CHAT_MOCK=1` restores the old mock adapter. Without that flag and without a Chat API base, the widget shows a clear error — no fake witty lines.
+| | |
+| --- | --- |
+| Space app | https://simzy-command-center-chat.hf.space |
+| Space page | https://huggingface.co/spaces/Simzy/command-center-chat |
 
-#### 1. Create the Space
+The phone client already defaults to that origin. Casey does **not** have to type it. Resolution order: System vault `cc.v1.vault.chatApiBase` → `VITE_CHAT_API_BASE` → `https://simzy-command-center-chat.hf.space`.
 
-Folder in this repo: [`spaces/command-center-chat/`](spaces/command-center-chat/).
+**Local demo only:** `VITE_CHAT_MOCK=1` restores the old mock adapter. Without that flag, Chat hits the live Space — no fake witty lines.
 
-1. Create a Space at huggingface.co → **SDK Docker**, hardware **CPU basic** (do not pick GPU).
-2. Copy that folder’s files into the Space root (`Dockerfile`, `requirements.txt`, `main.py`, README).
-3. Or **Duplicate** a Space that already has this app.
-4. **Settings → Secrets** (never commit):
+#### 1. Space secrets (Casey)
+
+On [Simzy/command-center-chat](https://huggingface.co/spaces/Simzy/command-center-chat) → **Settings → Secrets** (never commit, never paste into the phone):
 
 | Secret | Purpose |
 | --- | --- |
 | `GROK_WEBHOOK_URL` | Incoming webhook for the Grok Bot “Command Center chat” routine |
 | `GROK_WEBHOOK_SENDER_KEY` | Sender key from that routine |
-| `CHAT_BRIDGE_SECRET` | Bearer token the agent sends on `POST /chat/reply` |
+| `CHAT_BRIDGE_SECRET` | Bearer token the agent sends on `POST /api/chat/reply` |
 
-Optional: attach persistent storage at `/data` so sessions survive Space sleep. Without it, the app still writes `/data/chat-sessions` when writable, else `/tmp`.
-
-Space URL looks like `https://YOURUSER-command-center-chat.hf.space` (no trailing slash).
+The Space is already live. Do not redeploy it for the phone client. A copy of the bridge app lives in [`spaces/command-center-chat/`](spaces/command-center-chat/) for reference.
 
 #### 2. Grok Bot webhook routine
 
@@ -153,14 +153,14 @@ Webhook POST body:
   "botName": "Chief of Staff",
   "text": "Casey's message",
   "history": [],
-  "replyUrl": "https://YOURUSER-command-center-chat.hf.space/chat/reply"
+  "replyUrl": "https://simzy-command-center-chat.hf.space/api/chat/reply"
 }
 ```
 
 When the bot has an answer:
 
 ```http
-POST /chat/reply
+POST /api/chat/reply
 Authorization: Bearer ${CHAT_BRIDGE_SECRET}
 Content-Type: application/json
 
@@ -169,20 +169,22 @@ Content-Type: application/json
 
 `status` may be `"partial"` then `"final"`.
 
-#### 3. Point the phone at the Space
+#### 3. Phone client
 
 On GitHub Pages (`https://simzy420.github.io/command-center/`):
 
-- Paste the Space origin in **System → Chat bridge** (`cc.v1.vault.chatApiBase`), **or**
-- Set `VITE_CHAT_API_BASE=https://YOURUSER-command-center-chat.hf.space` on the Pages build.
+- Empty vault already uses `https://simzy-command-center-chat.hf.space`.
+- Optional override in **System → Chat bridge** (`cc.v1.vault.chatApiBase`).
+- Optional build env: `VITE_CHAT_API_BASE=https://simzy-command-center-chat.hf.space` (documented in `.env.example`).
 
-The client only talks to `{space}/chat`. Webhook secrets stay on the Space.
+The client only talks to `{space}/api/chat`. Webhook secrets stay on the Space.
 
-#### API (Space)
+#### API (live Space)
 
-- `POST /chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok: true, clientMsgId }`
-- `GET /chat?sessionId=` → `{ messages: [{ id, role, botId, text, clientMsgId, createdAt, status }] }`
-- `POST /chat/reply` Bearer `CHAT_BRIDGE_SECRET`
+- `GET /health` → `{ ok: true }`
+- `POST /api/chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok: true, clientMsgId }`
+- `GET /api/chat?sessionId=` → `{ messages: [{ id, role, botId, text, clientMsgId, createdAt, status }] }`
+- `POST /api/chat/reply` Bearer `CHAT_BRIDGE_SECRET`
 
 Text max 8000 characters. `sessionId` must be a UUID. CORS allows the Pages origin and localhost.
 
