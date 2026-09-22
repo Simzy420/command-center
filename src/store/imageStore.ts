@@ -73,6 +73,23 @@ function saveModel(model: ImageGenModel) {
   writeJson(MODEL_KEY, model);
 }
 
+function guessImageExtension(url: string): string {
+  if (/^data:image\/jpeg/i.test(url) || /\.jpe?g(\?|$)/i.test(url)) return 'jpg';
+  if (/^data:image\/webp/i.test(url) || /\.webp(\?|$)/i.test(url)) return 'webp';
+  if (/^data:image\/gif/i.test(url) || /\.gif(\?|$)/i.test(url)) return 'gif';
+  if (/^data:image\/svg/i.test(url) || /\.svg(\?|$)/i.test(url)) return 'svg';
+  return 'png';
+}
+
+function guessImageMime(url: string): string {
+  const ext = guessImageExtension(url);
+  if (ext === 'jpg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'svg') return 'image/svg+xml';
+  return 'image/png';
+}
+
 export const useImageStore = create<ImageState>((set, get) => ({
   images: load(),
   videos: loadVideos(),
@@ -98,6 +115,13 @@ export const useImageStore = create<ImageState>((set, get) => ({
       const images = capHistory([...batch, ...get().images]);
       save(images);
       set({ images });
+      for (const img of batch) {
+        if (img.preview.kind !== 'url') continue;
+        useFilesStore.getState().addMediaUrl(trimmed, img.preview.url, {
+          extension: guessImageExtension(img.preview.url),
+          mimeType: guessImageMime(img.preview.url),
+        });
+      }
       useActivityStore.getState().push({
         kind: 'image',
         text: `${adapter.label} rendered ${batch.length} image${batch.length === 1 ? '' : 's'}`,
