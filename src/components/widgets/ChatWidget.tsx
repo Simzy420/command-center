@@ -148,7 +148,13 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
         </ul>
       ) : (
         <ul className="space-y-2">
-          {messages.length === 0 ? (
+          {waiting ? (
+            <li className="text-xs uppercase tracking-wider text-cyan-200/80">Waiting for reply…</li>
+          ) : null}
+          {error && !waiting ? (
+            <li className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</li>
+          ) : null}
+          {messages.length === 0 && !waiting && !error ? (
             <li className="text-sm text-white/45">
               Separate thread for {current.name}. Casey&apos;s main conversation is with Chief of Staff.
             </li>
@@ -164,12 +170,6 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
               {m.text || (waiting ? '▍' : '')}
             </li>
           ))}
-          {waiting ? (
-            <li className="text-xs uppercase tracking-wider text-cyan-200/70">Waiting for reply…</li>
-          ) : null}
-          {error && !waiting ? (
-            <li className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</li>
-          ) : null}
         </ul>
       )}
     </WidgetFrame>

@@ -225,6 +225,7 @@ export function SideDrawer() {
                 if (saveChatApiBase(chatDraft)) {
                   setChatDraft('');
                   setChatMsg('Saved on this device only.');
+                  useChatStore.getState().clearError();
                 } else {
                   setChatMsg('Paste the Vercel origin first.');
                 }
