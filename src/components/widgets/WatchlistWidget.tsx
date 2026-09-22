@@ -16,17 +16,21 @@ let quoteEpoch = 0;
 
 function formatUsd(value: number): string {
   const abs = Math.abs(value);
-  const maximumFractionDigits = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 8;
+  if (abs > 0 && abs < 0.01) {
+    const digits = abs < 1e-6 ? 2 : 4;
+    return `$${value.toLocaleString('en-US', { maximumSignificantDigits: digits, useGrouping: false })}`;
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: Math.min(2, maximumFractionDigits),
-    maximumFractionDigits,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: abs >= 1 ? 2 : 4,
   }).format(value);
 }
 
 function formatChange(pct: number | null): string {
   if (pct == null || !Number.isFinite(pct)) return '—';
+  if (Math.abs(pct) < 0.005) return '0.00%';
   const sign = pct > 0 ? '+' : '';
   return `${sign}${pct.toFixed(2)}%`;
 }
@@ -117,11 +121,24 @@ export function WatchlistWidget({ widget }: WidgetRenderProps) {
     }
   }, [applyQuotes]);
 
+  const coinKey = items.map((item) => item.coinId).join(',');
+
   useEffect(() => {
-    void refresh();
+    const symbols = useWatchlistStore.getState().items;
+    if (symbols.length === 0) {
+      void refresh();
+      return;
+    }
+    const needsFetch = symbols.some((item) => !quoteCache.has(item.coinId));
+    if (needsFetch) {
+      void refresh();
+    } else {
+      setQuotes(cachedQuotes(symbols));
+      setGap(null);
+    }
     const timer = window.setInterval(() => void refresh(), REFRESH_MS);
     return () => clearInterval(timer);
-  }, [items, refresh]);
+  }, [coinKey, refresh]);
 
   async function onAdd(event: FormEvent) {
     event.preventDefault();
@@ -218,11 +235,11 @@ export function WatchlistWidget({ widget }: WidgetRenderProps) {
             const changeClass =
               change == null
                 ? 'text-white/35'
-                : change > 0
-                  ? 'text-emerald-300'
-                  : change < 0
-                    ? 'text-rose-300'
-                    : 'text-white/55';
+                : Math.abs(change) < 0.005
+                  ? 'text-white/55'
+                  : change > 0
+                    ? 'text-emerald-300'
+                    : 'text-rose-300';
             return (
               <li key={item.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2">
                 <div className="min-w-0 flex-1">
@@ -231,9 +248,7 @@ export function WatchlistWidget({ widget }: WidgetRenderProps) {
                     <span className="font-mono text-sm tabular-nums text-white">{quote ? formatUsd(quote.usd) : '—'}</span>
                   </div>
                   <div className="mt-0.5 flex items-baseline justify-between gap-3">
-                    <span className="truncate text-xs text-white/45">
-                      {item.name && item.name.toUpperCase() !== item.ticker ? item.name : 'CoinGecko'}
-                    </span>
+                    <span className="truncate text-xs text-white/45">{item.name !== item.ticker ? item.name : ''}</span>
                     <span className={cn('font-mono text-xs tabular-nums', changeClass)}>
                       {quote ? formatChange(change) : '—'}
                     </span>
