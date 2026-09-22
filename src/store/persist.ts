@@ -29,12 +29,16 @@ export function writeJson(key: string, value: unknown): void {
   }
 }
 
-/** Always write (used for on-device secrets the user explicitly saved). */
-export function writeJsonForced(key: string, value: unknown): void {
+/**
+ * Always write, including when Guest mode has turned `writeJson` off.
+ * Returns false when `setItem` throws (quota, private mode, or storage disabled).
+ */
+export function writeJsonForced(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
+    return true;
   } catch {
-    /* quota / private mode */
+    return false;
   }
 }
 

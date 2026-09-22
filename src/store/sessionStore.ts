@@ -56,6 +56,7 @@ function saveMeta(plan: Plan, flags: FeatureFlags) {
 }
 
 const initial = loadSession();
+// Guest mode blocks writeJson for ordinary widgets. Link tiles do not use that gate.
 setPersistEnabled(initial.plan === 'owner');
 
 export const useSessionStore = create<SessionState>((set, get) => ({
