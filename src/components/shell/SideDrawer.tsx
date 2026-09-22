@@ -198,12 +198,13 @@ export function SideDrawer() {
           {resolvedChatBase ? (
             <p className="font-mono text-[11px] break-all text-white/45">{resolvedChatBase}</p>
           ) : (
-            <p className="text-xs text-white/45">No API base — Pages needs a Vercel URL here.</p>
+            <p className="text-xs text-white/45">No API base — paste your Hugging Face Space URL (…hf.space).</p>
           )}
           {chatError ? <p className="text-xs text-rose-200">{chatError}</p> : null}
           <p className="text-xs leading-relaxed text-white/55">
-            Chief of Staff answers here for real. Deploy API on Vercel; set GROK_WEBHOOK_*, CHAT_BRIDGE_SECRET, and
-            optional Upstash. Never paste webhook secrets into this app.
+            Chief of Staff answers here for real. Create a CPU basic Hugging Face Space from spaces/command-center-chat,
+            set GROK_WEBHOOK_URL, GROK_WEBHOOK_SENDER_KEY, and CHAT_BRIDGE_SECRET on the Space, then paste
+            https://you-command-center-chat.hf.space. Never paste webhook secrets here.
           </p>
           <input
             type="url"
@@ -214,7 +215,7 @@ export function SideDrawer() {
               setChatDraft(e.target.value);
               setChatMsg('');
             }}
-            placeholder={chatApiBase || 'https://your-app.vercel.app'}
+            placeholder={chatApiBase || 'https://you-command-center-chat.hf.space'}
             className="hud-input w-full"
           />
           <div className="flex gap-2">
@@ -227,7 +228,7 @@ export function SideDrawer() {
                   setChatMsg('Saved on this device only.');
                   useChatStore.getState().clearError();
                 } else {
-                  setChatMsg('Paste the Vercel origin first.');
+                  setChatMsg('Paste the Hugging Face Space URL first.');
                 }
               }}
             >

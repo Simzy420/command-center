@@ -20,22 +20,15 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-export function onVercelHost(): boolean {
-  return typeof window !== 'undefined' && /\.vercel\.app$/i.test(window.location.hostname);
-}
-
-/** Empty string means same-origin `/api/chat` (Vercel host). */
+/** Hugging Face Space origin, no trailing slash. Empty until Casey pastes it. */
 export function resolveChatApiBase(): string {
   const vault = readVaultChatApiBase().replace(/\/$/, '');
   if (vault) return vault;
-  const env = (import.meta.env.VITE_CHAT_API_BASE ?? '').trim().replace(/\/$/, '');
-  if (env) return env;
-  if (onVercelHost()) return '';
-  return '';
+  return (import.meta.env.VITE_CHAT_API_BASE ?? '').trim().replace(/\/$/, '');
 }
 
 export function isChatBridgeConfigured(): boolean {
-  return Boolean(resolveChatApiBase()) || onVercelHost();
+  return Boolean(resolveChatApiBase());
 }
 
 export function chatApiUrl(path: string): string {
@@ -54,15 +47,16 @@ export function getChatSessionId(): string {
 
 function missingBridgeError(): Error {
   return new Error(
-    'Chat bridge URL is missing. Deploy the API on Vercel, then paste the Chat API base in System (or set VITE_CHAT_API_BASE on the Pages build). Chief of Staff cannot answer until that URL is set — no mock replies.',
+    'Chat bridge URL is missing. Create the CPU Hugging Face Space from spaces/command-center-chat, then paste its URL in System → Chat bridge (example https://YOU-command-center-chat.hf.space). Chief of Staff cannot answer until that URL is set — no mock replies.',
   );
 }
 
 async function readError(res: Response): Promise<string> {
   const raw = await res.text().catch(() => '');
   try {
-    const parsed = raw ? (JSON.parse(raw) as { error?: string }) : {};
-    if (parsed.error) return parsed.error;
+    const parsed = raw ? (JSON.parse(raw) as { error?: string; detail?: unknown }) : {};
+    if (typeof parsed.error === 'string' && parsed.error) return parsed.error;
+    if (typeof parsed.detail === 'string' && parsed.detail) return parsed.detail;
   } catch {
     /* not json */
   }
@@ -96,7 +90,7 @@ export const bridgeChatAdapter: ChatAdapter = {
 
     let post: Response;
     try {
-      post = await fetch(chatApiUrl('/api/chat'), {
+      post = await fetch(chatApiUrl('/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -110,7 +104,7 @@ export const bridgeChatAdapter: ChatAdapter = {
       });
     } catch {
       throw new Error(
-        'Could not reach the chat API. Check Chat API base in System, or open Command Center on the Vercel host.',
+        'Could not reach the Hugging Face Space. Check Chat API base in System (https://YOU-command-center-chat.hf.space).',
       );
     }
     if (!post.ok) throw new Error(await readError(post));
@@ -123,9 +117,7 @@ export const bridgeChatAdapter: ChatAdapter = {
       await sleep(POLL_MS);
       let poll: Response;
       try {
-        poll = await fetch(
-          `${chatApiUrl('/api/chat')}?sessionId=${encodeURIComponent(sessionId)}`,
-        );
+        poll = await fetch(`${chatApiUrl('/chat')}?sessionId=${encodeURIComponent(sessionId)}`);
       } catch {
         continue;
       }

@@ -112,30 +112,38 @@ Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Still
 
 ### Real chat (Chief of Staff)
 
-Casey talks to **Chief of Staff** in the Chat widget. The phone never calls Grok directly. It POSTs to **our** `/api/chat`; the server wakes the Grok Bot webhook; the agent POSTs the reply back; the widget polls until it lands.
+Casey talks to **Chief of Staff** in the Chat widget. The phone never calls Grok directly. It POSTs to a **Hugging Face Space** (`POST /chat`); the Space wakes the Grok Bot webhook; the agent POSTs the reply back to the Space; the widget polls until it lands.
 
 Default bot id is `chief`. Placeholder: **Message Chief of Staff…**
 
+Production host is a **CPU basic** Hugging Face Space — **not Vercel, not ZeroGPU**. `api/generate-image.ts` remains for an optional later OpenAI stills proxy; chat does not use it.
+
 **Local demo only:** `VITE_CHAT_MOCK=1` restores the old mock adapter. Without that flag and without a Chat API base, the widget shows a clear error — no fake witty lines.
 
-#### 1. Deploy the API on Vercel
+#### 1. Create the Space
 
-This repo already has `api/generate-image.ts` and `api/chat/`. Host the project on Vercel (root deploy so `/api/chat` works). Set these **server** env vars (Project Settings → Environment Variables). Never commit them.
+Folder in this repo: [`spaces/command-center-chat/`](spaces/command-center-chat/).
 
-| Env | Purpose |
+1. Create a Space at huggingface.co → **SDK Docker**, hardware **CPU basic** (do not pick GPU).
+2. Copy that folder’s files into the Space root (`Dockerfile`, `requirements.txt`, `main.py`, README).
+3. Or **Duplicate** a Space that already has this app.
+4. **Settings → Secrets** (never commit):
+
+| Secret | Purpose |
 | --- | --- |
-| `GROK_WEBHOOK_URL` | Incoming webhook URL for the Grok Bot / Chief of Staff routine |
-| `GROK_WEBHOOK_SENDER_KEY` | Optional sender secret. Sent as `Authorization: Bearer …`, `X-Webhook-Key`, and `?key=` |
-| `CHAT_BRIDGE_SECRET` | Bearer token the agent must send on `POST /api/chat/reply` |
-| `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Preferred session store (Upstash Redis REST, no extra npm deps) |
-| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Alternative: Vercel KV (same REST protocol) |
-| `CHAT_GIST_ID` + `GITHUB_TOKEN` | Fallback store if Redis is not set (gist needs `gist` scope) |
+| `GROK_WEBHOOK_URL` | Incoming webhook for the Grok Bot “Command Center chat” routine |
+| `GROK_WEBHOOK_SENDER_KEY` | Sender key from that routine |
+| `CHAT_BRIDGE_SECRET` | Bearer token the agent sends on `POST /chat/reply` |
 
-If none of the stores are set, the function uses an in-memory `Map`. That is **not** production-safe: a cold start or a second instance will miss replies. Use Upstash (or a gist) before you rely on this from the iPhone.
+Optional: attach persistent storage at `/data` so sessions survive Space sleep. Without it, the app still writes `/data/chat-sessions` when writable, else `/tmp`.
+
+Space URL looks like `https://YOURUSER-command-center-chat.hf.space` (no trailing slash).
 
 #### 2. Grok Bot webhook routine
 
-Create a Grok Bot that receives the webhook POST. Body is JSON:
+Create / use the Grok Bot routine **Command Center chat**. Copy its webhook URL and sender key into the **Space secrets** above — not into git, not into System.
+
+Webhook POST body:
 
 ```json
 {
@@ -145,36 +153,38 @@ Create a Grok Bot that receives the webhook POST. Body is JSON:
   "botName": "Chief of Staff",
   "text": "Casey's message",
   "history": [],
-  "replyUrl": "https://YOUR_APP.vercel.app/api/chat/reply"
+  "replyUrl": "https://YOURUSER-command-center-chat.hf.space/chat/reply"
 }
 ```
 
-When the bot has an answer, it must POST to `replyUrl` (or `/api/chat/reply`):
+When the bot has an answer:
 
 ```http
-POST /api/chat/reply
+POST /chat/reply
 Authorization: Bearer ${CHAT_BRIDGE_SECRET}
 Content-Type: application/json
 
 {"sessionId":"uuid","clientMsgId":"uuid","botId":"chief","text":"…","status":"final"}
 ```
 
-`status` may be `"partial"` while streaming, then `"final"`. Paste the webhook URL and sender key into **Vercel env only**, not into the public repo or System drawer.
+`status` may be `"partial"` then `"final"`.
 
-#### 3. Point the phone at the API
+#### 3. Point the phone at the Space
 
-- **App on Vercel** (`*.vercel.app`): same origin, no extra client config.
-- **GitHub Pages** (`https://simzy420.github.io/command-center/`): either set `VITE_CHAT_API_BASE=https://YOUR_APP.vercel.app` on the Pages build, **or** paste that origin in **System → Chat bridge** (stored as `cc.v1.vault.chatApiBase` on device).
+On GitHub Pages (`https://simzy420.github.io/command-center/`):
 
-The client only talks to `/api/chat`. Webhook secrets stay on the server.
+- Paste the Space origin in **System → Chat bridge** (`cc.v1.vault.chatApiBase`), **or**
+- Set `VITE_CHAT_API_BASE=https://YOURUSER-command-center-chat.hf.space` on the Pages build.
 
-#### API
+The client only talks to `{space}/chat`. Webhook secrets stay on the Space.
 
-- `POST /api/chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok: true, clientMsgId }` and forwards to `GROK_WEBHOOK_URL`
-- `GET /api/chat?sessionId=` → `{ messages: [{ id, role, botId, text, clientMsgId, createdAt, status }] }`
-- `POST /api/chat/reply` Bearer `CHAT_BRIDGE_SECRET` → `{ sessionId, clientMsgId, botId, text, status: "partial"|"final" }`
+#### API (Space)
 
-Text max 8000 characters. `sessionId` must be a UUID.
+- `POST /chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok: true, clientMsgId }`
+- `GET /chat?sessionId=` → `{ messages: [{ id, role, botId, text, clientMsgId, createdAt, status }] }`
+- `POST /chat/reply` Bearer `CHAT_BRIDGE_SECRET`
+
+Text max 8000 characters. `sessionId` must be a UUID. CORS allows the Pages origin and localhost.
 
 ## Shell map
 
