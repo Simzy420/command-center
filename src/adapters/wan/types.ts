@@ -36,6 +36,26 @@ export interface GeneratedVideo {
   createdAt: number;
   seed?: number;
   provider: 'wan22';
+  /** Stitched extend chain length. 1 is a fresh Generate. */
+  segments?: number;
+}
+
+/** Server-side chain returned by Simzy/wan22-extend. Paths are on that Space, not the phone. */
+export interface WanExtendState {
+  dir: string;
+  segments: string[];
+  video: string;
+  prompt?: string;
+  last_frame?: string | null;
+}
+
+export interface WanExtendResult {
+  url: string;
+  statusText: string;
+  segments?: number;
+  durationSeconds?: number;
+  lastFrameUrl: string | null;
+  state: WanExtendState | null;
 }
 
 export interface WanProgress {

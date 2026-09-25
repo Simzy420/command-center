@@ -96,6 +96,7 @@ Adapters sit behind interfaces so mocks can be replaced without touching widgets
 | Chat streaming | `ChatAdapter` | Chief of Staff bridge (`src/adapters/chat/bridge.ts`). Mock only if `VITE_CHAT_MOCK=1` | `src/adapters/chat/index.ts` (`getChatAdapter`) |
 | Image generation | `ImageGenAdapter` | OpenAI if a device key or Vercel proxy is present, else Pollinations | `src/adapters/imagegen/index.ts` (`getImageGenAdapter`) |
 | Image-to-video | Wan 2.2 Gradio client | Public Space `kulkas2pintu/wan222` (no token) | `src/adapters/wan/gradio.ts` |
+| Extend / stitch | Wan 2.2 Extend queue | Public Space `Simzy/wan22-extend` (no token) | `src/adapters/wan/extend.ts` |
 | Watchlist quotes | `MarketAdapter` | CoinGecko public `simple/price` (no key, no mock) | `src/adapters/market/index.ts` (`getMarketAdapter`) |
 
 A replacement adapter must implement the same interface as the one it swaps. Widgets already consume those modules.
@@ -124,6 +125,8 @@ Optional override: `VITE_MARKET_API_BASE` — a root that serves the same `/simp
 ### Wan 2.2 (image-to-video)
 
 Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Stills stay on OpenAI/Pollinations. Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
+
+After a clip exists, **Extend** and **Auto-extend** stitch more segments without leaving Command Center. The phone uploads the current clip to [Simzy/wan22-extend](https://huggingface.co/spaces/Simzy/wan22-extend) (`https://simzy-wan22-extend.hf.space`) and calls `do_extend` or `do_auto_extend`. That Space runs the next Wan 2.2 segment from the last frame (or a custom still) and ffmpeg-joins it onto the clip. Auto-extend aims for 8–22 seconds (default 14) and stops at 6 segments. Blank extend prompt reuses the Generate prompt. Optional build env: `VITE_WAN_EXTEND_ORIGIN` if that Space URL changes. No Hugging Face token is sent from the phone. The Space must allow browser calls from `https://simzy420.github.io` (it already does). Generate still uses `kulkas2pintu/wan222` directly.
 
 ### Real chat (Chief of Staff)
 
