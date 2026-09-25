@@ -40,3 +40,28 @@ export type WanScheduler = (typeof WAN_SCHEDULERS)[number];
 
 /** ZeroGPU often takes 1–3 minutes; keep a buffer before we give up. */
 export const WAN_TIMEOUT_MS = 270_000;
+
+/** Casey's stitch Space. Generate stays on kulkas2pintu/wan222. */
+export const WAN_EXTEND_SPACE_ID = 'Simzy/wan22-extend';
+export const WAN_EXTEND_ORIGIN_DEFAULT = 'https://simzy-wan22-extend.hf.space';
+export const WAN_EXTEND_PAGE = 'https://huggingface.co/spaces/Simzy/wan22-extend';
+
+export const EXTEND_START_LAST_FRAME = 'Last frame from video';
+export const EXTEND_START_UPLOAD = 'Upload custom image';
+export const EXTEND_START_CHOICES = [EXTEND_START_LAST_FRAME, EXTEND_START_UPLOAD] as const;
+export type ExtendStartMode = (typeof EXTEND_START_CHOICES)[number];
+
+/** Match Simzy/wan22-extend slider bounds so the queued call is accepted. */
+export const EXTEND_SEGMENT_MIN = 2;
+export const EXTEND_SEGMENT_MAX = 5;
+export const EXTEND_TARGET_MIN = 8;
+export const EXTEND_TARGET_MAX = 22;
+export const EXTEND_TARGET_DEFAULT = 14;
+export const EXTEND_MAX_SEGMENTS = 6;
+export const EXTEND_STEPS_MAX = 12;
+export const EXTEND_FPS_CHOICES = [16, 32, 64] as const;
+
+/** One extra segment, including ZeroGPU queue time. */
+export const WAN_EXTEND_TIMEOUT_MS = 8 * 60 * 1000;
+/** Auto-extend may run up to the 6-segment cap. */
+export const WAN_AUTO_EXTEND_TIMEOUT_MS = 30 * 60 * 1000;

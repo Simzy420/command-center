@@ -131,12 +131,26 @@ function elapsedLabel(elapsedMs: number): string {
   return `${m}m ${s.toString().padStart(2, '0')}s`;
 }
 
+function progressDesc(rec: Record<string, unknown>): string | null {
+  const rows = rec.progress_data;
+  if (!Array.isArray(rows)) return null;
+  for (const row of rows) {
+    if (row && typeof row === 'object' && typeof (row as { desc?: unknown }).desc === 'string') {
+      const desc = (row as { desc: string }).desc.trim();
+      if (desc) return desc;
+    }
+  }
+  return null;
+}
+
 async function readSse(
   response: Response,
   startedAt: number,
   onProgress: (p: WanProgress) => void,
   timeoutMs: number,
+  kind: 'generate' | 'extend' = 'generate',
 ): Promise<{ data: unknown }> {
+  const working = kind === 'extend' ? 'Extending the clip' : 'Generating video';
   if (!response.body) throw new Error('Space event stream had no body.');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -157,7 +171,10 @@ async function readSse(
     if (ev === 'heartbeat') {
       onProgress({
         phase: 'generating',
-        detail: `Still generating — ${elapsedLabel(elapsedMs)} elapsed. ZeroGPU often takes 1–3 minutes.`,
+        detail:
+          kind === 'extend'
+            ? `Still extending — ${elapsedLabel(elapsedMs)} elapsed. Each segment often takes 1–3 minutes.`
+            : `Still generating — ${elapsedLabel(elapsedMs)} elapsed. ZeroGPU often takes 1–3 minutes.`,
         elapsedMs,
       });
       return {};
@@ -193,7 +210,7 @@ async function readSse(
     if (ev === 'generating' || ev === 'process_generating') {
       onProgress({
         phase: 'generating',
-        detail: `Generating video — ${elapsedLabel(elapsedMs)} elapsed. This often takes 1–3 minutes.`,
+        detail: `${working} — ${elapsedLabel(elapsedMs)} elapsed. This often takes 1–3 minutes.`,
         elapsedMs,
       });
       return {};
@@ -201,7 +218,40 @@ async function readSse(
     if (payload && typeof payload === 'object') {
       const rec = payload as Record<string, unknown>;
       const msg = rec.msg;
+      if (msg === 'heartbeat') {
+        onProgress({
+          phase: 'generating',
+          detail: `${working} — ${elapsedLabel(elapsedMs)} elapsed. This often takes 1–3 minutes.`,
+          elapsedMs,
+        });
+        return {};
+      }
+      if (msg === 'progress') {
+        onProgress({
+          phase: 'generating',
+          detail: progressDesc(rec) || `${working} — ${elapsedLabel(elapsedMs)} elapsed.`,
+          elapsedMs,
+        });
+        return {};
+      }
+      if (msg === 'close_stream') {
+        throw new Error(
+          kind === 'extend'
+            ? 'Extend Space closed the stream before the stitched clip was ready.'
+            : 'Space event stream ended before the video was ready.',
+        );
+      }
       if (msg === 'process_completed' || msg === 'complete') {
+        if (rec.success === false) {
+          throw new Error(
+            humanSpaceError(
+              rec.output ?? payload,
+              kind === 'extend'
+                ? 'Extend failed. The Space queue may be busy, or the clip could not be stitched. Try again.'
+                : 'Space returned an error with no details. Try a larger still, or retry — ZeroGPU queues fill up.',
+            ),
+          );
+        }
         const output = rec.output;
         const data =
           output && typeof output === 'object' && 'data' in output
@@ -215,7 +265,7 @@ async function readSse(
           phase: msg === 'process_starts' ? 'generating' : 'queued',
           detail:
             msg === 'process_starts'
-              ? `Generating video — ${elapsedLabel(elapsedMs)} elapsed.`
+              ? `${working} — ${elapsedLabel(elapsedMs)} elapsed.`
               : 'Queued on Hugging Face ZeroGPU…',
           elapsedMs,
         });
@@ -367,6 +417,142 @@ export async function generateWanVideo(
     return { url: absUrl(rel, WAN_SPACE_ORIGIN), seed: pickSeed(result) };
   } catch (err) {
     if (ac.signal.aborted) throw new WanTimeoutError(Date.now() - startedAt);
+    throw err;
+  } finally {
+    window.clearTimeout(killer);
+    window.clearInterval(tick);
+  }
+}
+
+const EXTEND_CORS = 'This browser blocked the Extend Space API (CORS). Open the Extend Space in a new tab.';
+
+let extendConfigCache: { origin: string; deps: { api_name?: string | null }[] } | null = null;
+
+export async function gradioFnIndex(origin: string, apiName: string): Promise<number> {
+  if (!extendConfigCache || extendConfigCache.origin !== origin) {
+    let res: Response;
+    try {
+      res = await fetch(`${origin}/config`, { method: 'GET', mode: 'cors' });
+    } catch (err) {
+      if (isCorsFailure(err)) throw new WanCorsError(EXTEND_CORS);
+      throw err;
+    }
+    if (!res.ok) throw new Error(`Extend Space config failed (${res.status}).`);
+    const body = (await res.json()) as { dependencies?: { api_name?: string | null }[] };
+    extendConfigCache = { origin, deps: body.dependencies ?? [] };
+  }
+  const idx = extendConfigCache.deps.findIndex((dep) => dep.api_name === apiName);
+  if (idx < 0) throw new Error(`Extend Space has no "${apiName}" action.`);
+  return idx;
+}
+
+export async function uploadGradioFile(origin: string, file: Blob, filename: string): Promise<string> {
+  const body = new FormData();
+  const safeName = filename.split(/[/\\]/).pop() || 'upload.bin';
+  body.append('files', file, safeName);
+  let res: Response;
+  try {
+    res = await fetch(`${origin}/gradio_api/upload`, { method: 'POST', mode: 'cors', body });
+  } catch (err) {
+    if (isCorsFailure(err)) throw new WanCorsError(EXTEND_CORS);
+    throw err;
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(humanSpaceError(parseJsonLoose(text), `Extend Space upload failed (${res.status}).`));
+  }
+  const paths = (await res.json()) as unknown;
+  const path = Array.isArray(paths) ? paths[0] : null;
+  if (typeof path !== 'string' || !path) throw new Error('Extend Space upload did not return a file path.');
+  return path;
+}
+
+async function joinGradioQueue(
+  origin: string,
+  fnIndex: number,
+  data: unknown[],
+  sessionHash: string,
+  signal: AbortSignal,
+  startedAt: number,
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${origin}/gradio_api/queue/join`, {
+      method: 'POST',
+      mode: 'cors',
+      signal,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ data, fn_index: fnIndex, session_hash: sessionHash }),
+    });
+  } catch (err) {
+    if (signal.aborted) throw new WanTimeoutError(Date.now() - startedAt);
+    if (isCorsFailure(err)) throw new WanCorsError(EXTEND_CORS);
+    throw err;
+  }
+  if (res.status === 429) throw new Error('ZeroGPU is rate-limited or queue is full. Try again in a minute.');
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(humanSpaceError(parseJsonLoose(text), `Extend Space queue failed (${res.status}).`));
+  }
+}
+
+export async function callGradioQueue(options: {
+  origin: string;
+  fnIndex: number;
+  data: unknown[];
+  timeoutMs: number;
+  onProgress?: (p: WanProgress) => void;
+}): Promise<unknown> {
+  const onProgress = options.onProgress ?? (() => undefined);
+  const startedAt = Date.now();
+  const sessionHash =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `wan_${startedAt}`;
+  const ac = new AbortController();
+  const killer = window.setTimeout(() => ac.abort(), options.timeoutMs);
+  const tick = window.setInterval(() => {
+    const elapsedMs = Date.now() - startedAt;
+    onProgress({
+      phase: 'generating',
+      detail: `Extending the clip — ${elapsedLabel(elapsedMs)} elapsed. Each segment often takes 1–3 minutes.`,
+      elapsedMs,
+    });
+  }, 5000);
+
+  try {
+    await joinGradioQueue(options.origin, options.fnIndex, options.data, sessionHash, ac.signal, startedAt);
+    onProgress({
+      phase: 'polling',
+      detail: 'Queued on the Extend Space. Keeping this tab open…',
+      elapsedMs: Date.now() - startedAt,
+    });
+    let res: Response;
+    try {
+      res = await fetch(
+        `${options.origin}/gradio_api/queue/data?session_hash=${encodeURIComponent(sessionHash)}`,
+        {
+          method: 'GET',
+          mode: 'cors',
+          signal: ac.signal,
+          headers: { Accept: 'text/event-stream' },
+        },
+      );
+    } catch (err) {
+      if (ac.signal.aborted) throw new WanTimeoutError(Date.now() - startedAt);
+      if (isCorsFailure(err)) throw new WanCorsError(EXTEND_CORS);
+      throw err;
+    }
+    if (res.status === 429) throw new Error('ZeroGPU queue rejected the poll. Try again shortly.');
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(humanSpaceError(parseJsonLoose(text), `Extend Space poll failed (${res.status}).`));
+    }
+    const { data } = await readSse(res, startedAt, onProgress, options.timeoutMs, 'extend');
+    return data;
+  } catch (err) {
+    if (ac.signal.aborted) throw new WanTimeoutError(Date.now() - startedAt);
+    if (isCorsFailure(err)) throw new WanCorsError(EXTEND_CORS);
     throw err;
   } finally {
     window.clearTimeout(killer);
