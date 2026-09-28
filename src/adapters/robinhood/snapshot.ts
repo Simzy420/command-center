@@ -25,6 +25,12 @@ export interface RobinhoodSnapshot {
 
 export const ROBINHOOD_POLL_MS = 30_000;
 export const ROBINHOOD_STALE_MS = 10 * 60 * 1000;
+/** How often the phone re-reads the Space while a manual refresh is open. */
+export const ROBINHOOD_REFRESH_POLL_MS = 2_000;
+/** Stop waiting for Chief of Staff and surface an error after this long. */
+export const ROBINHOOD_REFRESH_TIMEOUT_MS = 45_000;
+export const ROBINHOOD_REFRESH_WAIT_MESSAGE =
+  'Waiting for Chief of Staff sync — try again in a moment.';
 
 const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.\-]{0,15}$/;
 
@@ -87,6 +93,25 @@ export function normalizeSnapshot(raw: unknown): RobinhoodSnapshot | null {
     currency,
     positions,
   };
+}
+
+/**
+ * Manual refresh succeeds when the snapshot moved past the one on screen.
+ * With nothing on screen yet, it has to be newer than the refresh request.
+ */
+export function snapshotIsFresher(
+  updatedAt: string | null | undefined,
+  previousUpdatedAt: string | null | undefined,
+  requestedAt: string | null | undefined,
+): boolean {
+  if (!updatedAt) return false;
+  const updated = Date.parse(updatedAt);
+  if (!Number.isFinite(updated)) return false;
+  const previous = previousUpdatedAt ? Date.parse(previousUpdatedAt) : Number.NaN;
+  if (Number.isFinite(previous)) return updated > previous;
+  const requested = requestedAt ? Date.parse(requestedAt) : Number.NaN;
+  if (Number.isFinite(requested)) return updated > requested;
+  return false;
 }
 
 /** A zero price or market value means the snapshot did not include a quote. */

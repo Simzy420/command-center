@@ -119,6 +119,92 @@ def save_snapshot(snapshot: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+def refresh_file() -> Path:
+    return STORE.parent / "robinhood-refresh.json"
+
+
+def utc_stamp(moment: datetime | None = None) -> str:
+    current = moment or datetime.now(timezone.utc)
+    return current.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def parse_utc(raw: str | None) -> datetime | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def load_refresh_request() -> str | None:
+    path = refresh_file()
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    raw = data.get("requestedAt")
+    parsed = parse_utc(raw if isinstance(raw, str) else None)
+    if parsed is None:
+        return None
+    return utc_stamp(parsed)
+
+
+def save_refresh_request(requested_at: str) -> None:
+    path = refresh_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps({"requestedAt": requested_at}), encoding="utf-8")
+    tmp.replace(path)
+
+
+def clear_refresh_request() -> None:
+    path = refresh_file()
+    path.unlink(missing_ok=True)
+    path.with_suffix(path.suffix + ".tmp").unlink(missing_ok=True)
+
+
+def refresh_is_pending(snapshot: dict[str, Any] | None, requested_at: str | None) -> bool:
+    """True when a request is waiting on a snapshot that is missing or older than it."""
+    requested = parse_utc(requested_at)
+    if requested is None:
+        return False
+    if not snapshot:
+        return True
+    updated = parse_utc(str(snapshot.get("updatedAt") or ""))
+    if updated is None:
+        return True
+    return requested > updated
+
+
+def robinhood_payload() -> dict[str, Any]:
+    snapshot = load_snapshot()
+    requested_at = load_refresh_request()
+    pending = refresh_is_pending(snapshot, requested_at)
+    body: dict[str, Any] = {"snapshot": snapshot, "refreshPending": pending}
+    if pending and requested_at:
+        body["refreshRequestedAt"] = requested_at
+    return body
+
+
+# One public refresh per IP inside this window. Phone retries after the ~45s wait.
+REFRESH_INTERVAL_S = 15.0
+
+
+def client_addr(request: Request) -> str:
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    host = forwarded or (request.client.host if request.client else "")
+    return (host or "unknown")[:80]
+
+
 def robinhood_secret() -> str:
     """Dedicated secret wins. Otherwise reuse the chat reply secret."""
     dedicated = (os.environ.get("ROBINHOOD_BRIDGE_SECRET") or "").strip()
@@ -264,7 +350,7 @@ app.add_middleware(
     ],
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Webhook-Key"],
     max_age=86400,
 )
@@ -425,7 +511,7 @@ NO_STORE = {"Cache-Control": "no-store"}
 @app.get("/robinhood")
 @app.get("/api/robinhood")
 def get_robinhood() -> JSONResponse:
-    return JSONResponse({"snapshot": load_snapshot()}, headers=NO_STORE)
+    return JSONResponse(robinhood_payload(), headers=NO_STORE)
 
 
 @app.post("/robinhood")
@@ -447,7 +533,44 @@ async def post_robinhood(request: Request, authorization: str | None = Header(de
         raise HTTPException(400, "Invalid Robinhood snapshot.") from exc
     snapshot = normalize_snapshot(body)
     save_snapshot(snapshot)
+    clear_refresh_request()
     return JSONResponse({"ok": True, "updatedAt": snapshot["updatedAt"]}, headers=NO_STORE)
+
+
+@app.post("/robinhood/refresh")
+@app.post("/api/robinhood/refresh")
+def post_robinhood_refresh(request: Request) -> JSONResponse:
+    """Public. Phone asks Chief of Staff to pull Robinhood; it never calls Robinhood itself."""
+    if rate_limited(f"robinhood:refresh:{client_addr(request)}", max_n=1, window_s=REFRESH_INTERVAL_S):
+        raise HTTPException(429, "A refresh was just requested. Wait a few seconds.")
+    requested_at = utc_stamp()
+    save_refresh_request(requested_at)
+    return JSONResponse(
+        {"ok": True, "requestedAt": requested_at, "refreshPending": True},
+        headers=NO_STORE,
+    )
+
+
+@app.delete("/robinhood/refresh")
+@app.delete("/api/robinhood/refresh")
+def delete_robinhood_refresh(authorization: str | None = Header(default=None)) -> JSONResponse:
+    secret = robinhood_secret()
+    if not secret:
+        raise HTTPException(500, "Space is missing ROBINHOOD_BRIDGE_SECRET (or CHAT_BRIDGE_SECRET).")
+    if not bearer_ok(authorization, secret):
+        raise HTTPException(401, "Unauthorized.")
+    clear_refresh_request()
+    return JSONResponse({"ok": True, "refreshPending": False}, headers=NO_STORE)
+
+
+@app.get("/robinhood/pending-refresh")
+@app.get("/api/robinhood/pending-refresh")
+def get_robinhood_pending() -> JSONResponse:
+    payload = robinhood_payload()
+    body: dict[str, Any] = {"refreshPending": payload["refreshPending"]}
+    if "refreshRequestedAt" in payload:
+        body["refreshRequestedAt"] = payload["refreshRequestedAt"]
+    return JSONResponse(body, headers=NO_STORE)
 
 
 @app.exception_handler(HTTPException)

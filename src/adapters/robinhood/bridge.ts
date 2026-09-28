@@ -8,9 +8,21 @@ export function resolveRobinhoodApiBase(): string {
   return resolveChatApiBase();
 }
 
-export function robinhoodSnapshotUrl(base = resolveRobinhoodApiBase()): string {
-  if (/\/api\/robinhood$/.test(base)) return base;
-  return `${base}/api/robinhood`;
+export function robinhoodSnapshotUrl(base = resolveRobinhoodApiBase(), cacheBust?: string | number): string {
+  const path = /\/api\/robinhood$/.test(base) ? base : `${base}/api/robinhood`;
+  if (cacheBust == null || cacheBust === '') return path;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}t=${encodeURIComponent(String(cacheBust))}`;
+}
+
+export function robinhoodRefreshUrl(base = resolveRobinhoodApiBase()): string {
+  return `${robinhoodSnapshotUrl(base)}/refresh`;
+}
+
+export interface RobinhoodPoll {
+  snapshot: RobinhoodSnapshot | null;
+  refreshPending: boolean;
+  refreshRequestedAt: string | null;
 }
 
 async function readError(res: Response): Promise<string> {
@@ -28,7 +40,9 @@ async function readError(res: Response): Promise<string> {
   return raw.slice(0, 240) || `Snapshot bridge HTTP ${res.status}`;
 }
 
-export async function fetchRobinhoodSnapshot(url = robinhoodSnapshotUrl()): Promise<RobinhoodSnapshot | null> {
+export async function fetchRobinhoodSnapshot(
+  url = robinhoodSnapshotUrl(resolveRobinhoodApiBase(), Date.now()),
+): Promise<RobinhoodPoll> {
   let res: Response;
   try {
     res = await fetch(url, { method: 'GET', cache: 'no-store' });
@@ -42,10 +56,48 @@ export async function fetchRobinhoodSnapshot(url = robinhoodSnapshotUrl()): Prom
   } catch {
     throw new Error('Snapshot bridge returned an unreadable response.');
   }
-  if (!data || typeof data !== 'object') return null;
-  const snapshot = (data as { snapshot?: unknown }).snapshot;
-  if (snapshot == null) return null;
-  const normalized = normalizeSnapshot(snapshot);
+  if (!data || typeof data !== 'object') {
+    return { snapshot: null, refreshPending: false, refreshRequestedAt: null };
+  }
+  const row = data as { snapshot?: unknown; refreshPending?: unknown; refreshRequestedAt?: unknown };
+  const refreshPending = row.refreshPending === true;
+  const refreshRequestedAt =
+    typeof row.refreshRequestedAt === 'string' && row.refreshRequestedAt.trim()
+      ? row.refreshRequestedAt.trim()
+      : null;
+  if (row.snapshot == null) return { snapshot: null, refreshPending, refreshRequestedAt };
+  const normalized = normalizeSnapshot(row.snapshot);
   if (!normalized) throw new Error('Snapshot bridge returned an unreadable portfolio.');
-  return normalized;
+  return { snapshot: normalized, refreshPending, refreshRequestedAt };
+}
+
+/** Ask the Space to store a pending refresh. Chief of Staff pulls Robinhood and pushes a snapshot. */
+export async function requestRobinhoodRefresh(url = robinhoodRefreshUrl()): Promise<{ requestedAt: string }> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+  } catch {
+    throw new Error('Could not reach the snapshot bridge. Check the chat Space URL.');
+  }
+  if (res.status === 404) {
+    throw new Error('Snapshot bridge has no /api/robinhood/refresh route yet. Update the chat Space, then retry.');
+  }
+  if (!res.ok) throw new Error(await readError(res));
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('Snapshot bridge returned an unreadable response.');
+  }
+  const requestedAt =
+    data && typeof data === 'object' && typeof (data as { requestedAt?: unknown }).requestedAt === 'string'
+      ? (data as { requestedAt: string }).requestedAt.trim()
+      : '';
+  if (!requestedAt) throw new Error('Refresh request was not stored.');
+  return { requestedAt };
 }
