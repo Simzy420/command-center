@@ -6,9 +6,9 @@ import { useSessionStore } from '@/store/sessionStore';
 
 const PREFERRED: Record<string, string[]> = {
   scout: ['files', 'gmail'],
-  sniper: ['watchlist', 'trading'],
+  sniper: ['watchlist', 'trading', 'robinhood'],
   pulse: ['chat'],
-  ledger: ['files', 'todo'],
+  ledger: ['robinhood', 'files', 'todo'],
   shield: ['todo', 'watchlist'],
   liquid98: ['imagegen'],
   chief: ['chat', 'links'],

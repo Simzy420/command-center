@@ -1,10 +1,12 @@
 import hmac
 import json
+import math
 import os
 import re
 import time
 import uuid
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -14,7 +16,7 @@ from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 MAX_TEXT = 8000
 MAX_HISTORY = 40
@@ -94,6 +96,86 @@ def bearer_ok(authorization: str | None, secret: str) -> bool:
     return hmac.compare_digest(token, secret)
 
 
+def snapshot_file() -> Path:
+    return STORE.parent / "robinhood-snapshot.json"
+
+
+def load_snapshot() -> dict[str, Any] | None:
+    path = snapshot_file()
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def save_snapshot(snapshot: dict[str, Any]) -> None:
+    path = snapshot_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(snapshot), encoding="utf-8")
+    tmp.replace(path)
+
+
+def robinhood_secret() -> str:
+    """Dedicated secret wins. Otherwise reuse the chat reply secret."""
+    dedicated = (os.environ.get("ROBINHOOD_BRIDGE_SECRET") or "").strip()
+    if dedicated:
+        return dedicated
+    return (os.environ.get("CHAT_BRIDGE_SECRET") or "").strip()
+
+
+def clean_number(value: float | None) -> float | None:
+    if value is None:
+        return None
+    number = float(value)
+    if not math.isfinite(number):
+        raise HTTPException(400, "Snapshot numbers must be finite.")
+    return number
+
+
+def clean_label(raw: str | None) -> str:
+    text = (raw or "").strip()
+    if not text or re.fullmatch(r"[\d\s\-]+", text) or text.lower() == "individual":
+        return "Individual"
+    return text[:40]
+
+
+def clean_last4(raw: str | None) -> str:
+    digits = re.sub(r"\D", "", raw or "")
+    return digits[-4:]
+
+
+def clean_symbol(raw: str) -> str:
+    symbol = re.sub(r"\s+", "", raw).upper()
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9.\-]{0,15}", symbol):
+        raise HTTPException(400, "A position symbol is invalid.")
+    return symbol
+
+
+def clean_updated_at(raw: str | None) -> str:
+    text = (raw or "").strip()
+    if text:
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def clean_currency(raw: str | None) -> str:
+    text = (raw or "").strip().upper()
+    if re.fullmatch(r"[A-Z]{3}", text):
+        return text
+    return "USD"
+
+
 class ChatIn(BaseModel):
     sessionId: str
     clientMsgId: str
@@ -109,6 +191,63 @@ class ReplyIn(BaseModel):
     botId: str = "chief"
     text: str = Field("", max_length=MAX_TEXT)
     status: Literal["partial", "final"] = "final"
+
+
+class PositionIn(BaseModel):
+    model_config = {"extra": "ignore"}
+    symbol: str = Field(..., min_length=1, max_length=32)
+    quantity: float
+    avgCost: float | None = None
+    price: float | None = None
+    marketValue: float | None = None
+    dayChangePct: float | None = None
+
+
+class AccountIn(BaseModel):
+    model_config = {"extra": "ignore"}
+    label: str = Field(default="", max_length=80)
+    last4: str = Field(default="", max_length=64)
+
+
+class SnapshotIn(BaseModel):
+    model_config = {"extra": "ignore"}
+    updatedAt: str | None = Field(default=None, max_length=64)
+    account: AccountIn | None = None
+    totalValue: float | None = None
+    equityValue: float | None = None
+    cryptoValue: float | None = None
+    cash: float | None = None
+    currency: str = Field(default="USD", max_length=8)
+    positions: list[PositionIn] = Field(default_factory=list, max_length=250)
+
+
+def normalize_snapshot(body: SnapshotIn) -> dict[str, Any]:
+    account = body.account
+    positions: list[dict[str, Any]] = []
+    for pos in body.positions:
+        positions.append(
+            {
+                "symbol": clean_symbol(pos.symbol),
+                "quantity": clean_number(pos.quantity),
+                "avgCost": clean_number(pos.avgCost),
+                "price": clean_number(pos.price),
+                "marketValue": clean_number(pos.marketValue),
+                "dayChangePct": clean_number(pos.dayChangePct),
+            }
+        )
+    return {
+        "updatedAt": clean_updated_at(body.updatedAt),
+        "account": {
+            "label": clean_label(account.label if account else None),
+            "last4": clean_last4(account.last4 if account else None),
+        },
+        "totalValue": clean_number(body.totalValue),
+        "equityValue": clean_number(body.equityValue),
+        "cryptoValue": clean_number(body.cryptoValue),
+        "cash": clean_number(body.cash),
+        "currency": clean_currency(body.currency),
+        "positions": positions,
+    }
 
 
 app = FastAPI(title="Command Center chat bridge", docs_url=None, redoc_url=None)
@@ -174,6 +313,7 @@ def health() -> dict[str, Any]:
         "service": "command-center-chat",
         "store": str(STORE),
         "hardware": "cpu-basic",
+        "robinhood": True,
     }
 
 
@@ -279,6 +419,37 @@ def post_reply(body: ReplyIn, authorization: str | None = Header(default=None)) 
     return {"ok": True, "clientMsgId": client_msg_id, "status": status}
 
 
+NO_STORE = {"Cache-Control": "no-store"}
+
+
+@app.get("/robinhood")
+@app.get("/api/robinhood")
+def get_robinhood() -> JSONResponse:
+    return JSONResponse({"snapshot": load_snapshot()}, headers=NO_STORE)
+
+
+@app.post("/robinhood")
+@app.post("/api/robinhood")
+async def post_robinhood(request: Request, authorization: str | None = Header(default=None)) -> JSONResponse:
+    secret = robinhood_secret()
+    if not secret:
+        raise HTTPException(500, "Space is missing ROBINHOOD_BRIDGE_SECRET (or CHAT_BRIDGE_SECRET).")
+    if not bearer_ok(authorization, secret):
+        raise HTTPException(401, "Unauthorized.")
+    if rate_limited("robinhood:write", 60):
+        raise HTTPException(429, "Too many snapshot posts.")
+    raw = await request.body()
+    if len(raw) > 256_000:
+        raise HTTPException(413, "Snapshot is too large.")
+    try:
+        body = SnapshotIn.model_validate_json(raw)
+    except (ValidationError, UnicodeDecodeError) as exc:
+        raise HTTPException(400, "Invalid Robinhood snapshot.") from exc
+    snapshot = normalize_snapshot(body)
+    save_snapshot(snapshot)
+    return JSONResponse({"ok": True, "updatedAt": snapshot["updatedAt"]}, headers=NO_STORE)
+
+
 @app.exception_handler(HTTPException)
 async def http_error(_request: Request, exc: HTTPException) -> JSONResponse:
     detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
@@ -286,5 +457,7 @@ async def http_error(_request: Request, exc: HTTPException) -> JSONResponse:
 
 
 @app.exception_handler(RequestValidationError)
-async def valid_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
-    return JSONResponse(status_code=400, content={"error": "Invalid chat payload.", "detail": exc.errors()})
+async def valid_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    robinhood = request.url.path.rstrip("/").endswith("/robinhood")
+    message = "Invalid Robinhood snapshot." if robinhood else "Invalid chat payload."
+    return JSONResponse(status_code=400, content={"error": message, "detail": exc.errors()})

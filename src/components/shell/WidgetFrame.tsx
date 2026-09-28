@@ -12,6 +12,7 @@ const ACCENT: Record<string, string> = {
   links: 'accent-cyan',
   imagegen: 'accent-mag',
   watchlist: 'accent-gold',
+  robinhood: 'accent-gold',
   gmail: 'accent-cyan',
   trading: 'accent-gold',
 };
