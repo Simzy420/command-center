@@ -23,7 +23,7 @@ export interface RobinhoodSnapshot {
   positions: RobinhoodPosition[];
 }
 
-export const ROBINHOOD_POLL_MS = 45_000;
+export const ROBINHOOD_POLL_MS = 30_000;
 export const ROBINHOOD_STALE_MS = 10 * 60 * 1000;
 
 const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.\-]{0,15}$/;
