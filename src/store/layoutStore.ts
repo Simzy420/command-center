@@ -1,18 +1,34 @@
 import { create } from 'zustand';
+import { ensureRobinhoodWidgets } from '@/data/ensureRobinhood';
 import { createStarterLayout } from '@/data/starterLayout';
 import { uid } from '@/lib/ids';
 import { fromGridLayout, type GridItem } from '@/lib/grid';
-import { readJson, writeJson } from '@/store/persist';
+import { readJson, writeJson, writeJsonForced } from '@/store/persist';
 import type { BoardId, LayoutDocument, WidgetInstance } from '@/types/layout';
 
 const KEY = 'layout';
+const ROBINHOOD_SEED_KEY = 'robinhoodBoardSeed';
+
+/** Guest layouts must not be written. Read the plan directly so this stays correct during module init. */
+function layoutWritesAllowed(): boolean {
+  const session = readJson<{ plan?: string } | null>('session', null);
+  return session?.plan !== 'guest';
+}
 
 function load(): LayoutDocument {
   const saved = readJson<LayoutDocument | null>(KEY, null);
-  if (saved && saved.version === 1 && Array.isArray(saved.widgets)) {
-    return saved;
+  const base = saved && saved.version === 1 && Array.isArray(saved.widgets) ? saved : createStarterLayout();
+  if (readJson<boolean>(ROBINHOOD_SEED_KEY, false)) return base;
+  const seeded = ensureRobinhoodWidgets(base, () => uid('w'));
+  if (!layoutWritesAllowed()) return seeded;
+  if (seeded === base) {
+    writeJsonForced(ROBINHOOD_SEED_KEY, true);
+    return base;
   }
-  return createStarterLayout();
+  const next = { ...seeded, updatedAt: Date.now() };
+  writeJsonForced(KEY, next);
+  writeJsonForced(ROBINHOOD_SEED_KEY, true);
+  return next;
 }
 
 function persist(doc: LayoutDocument) {

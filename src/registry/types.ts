@@ -11,7 +11,7 @@ export interface WidgetDefinition {
   title: string;
   description: string;
   /** Dock / add-sheet glyph name */
-  icon: 'message' | 'files' | 'todo' | 'links' | 'image' | 'watch' | 'mail' | 'trade';
+  icon: 'message' | 'files' | 'todo' | 'links' | 'image' | 'watch' | 'mail' | 'trade' | 'brokerage';
   defaultSize: { w: number; h: number };
   minSize: { w: number; h: number };
   defaultSettings?: Record<string, unknown>;

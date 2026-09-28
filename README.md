@@ -23,7 +23,7 @@ Live (GitHub Pages): https://simzy420.github.io/command-center/
 - Avatars use the three ref styles: cyan ringed sphere, purple energy pyramid, fragmented lightning cube.
 - 2-column grid on phone, 12-column on desktop.
 - Long-press / drag from the **widget header in Edit mode**. Use mode does not capture drag, so the page scrolls normally.
-- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. Optional Gmail/Trading stubs still show **Connect data source**.
+- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. The Robinhood widget shows the latest portfolio snapshot pushed to the chat Space — account total and equity positions, with quotes only when that snapshot includes them. Optional Gmail/Trading stubs still show **Connect data source**.
 - No App Store binary, no unrestricted iframes, no live wallet signing, no fake live trading, no real payment backend.
 - Owner plan persists to `localStorage`. Guest/unpaid sees **Preview mode — upgrade to save** (billing is a stub in System).
 
@@ -203,6 +203,61 @@ The client only talks to `{space}/api/chat`. Webhook secrets stay on the Space.
 
 Text max 8000 characters. `sessionId` must be a UUID. CORS allows the Pages origin and localhost.
 
+### Robinhood snapshot (same Space)
+
+The phone cannot call Robinhood or the Grok Bot Robinhood MCP. There is no Robinhood login in the Vite client. Chief of Staff (or a routine that already has the Robinhood MCP) **pushes** a portfolio snapshot to this Space. The Robinhood widget **polls** it about every 45 seconds.
+
+Host is the same chat Space. `api/generate-image.ts` is still unrelated. Do not add a second host.
+
+| | |
+| --- | --- |
+| GET (public) | `https://simzy-command-center-chat.hf.space/api/robinhood` |
+| POST (bearer) | same URL |
+
+Phone resolution: System vault chat base → `VITE_CHAT_API_BASE` → the default Space, then `/api/robinhood`. Optional override: `VITE_ROBINHOOD_API_BASE` (origin only). **Never** put `ROBINHOOD_BRIDGE_SECRET`, `CHAT_BRIDGE_SECRET`, or a Robinhood token in a `VITE_` variable or in the phone vault.
+
+#### Space secret
+
+On the Space → **Settings → Secrets**:
+
+| Secret | Purpose |
+| --- | --- |
+| `ROBINHOOD_BRIDGE_SECRET` | Bearer token for `POST /api/robinhood`. Set this to use a secret that is not the chat reply token. |
+| `CHAT_BRIDGE_SECRET` | Used for `POST /api/robinhood` **only when `ROBINHOOD_BRIDGE_SECRET` is unset**. Chat replies always use this secret, not the Robinhood one. |
+
+GET is open so the phone can poll. Anyone who can reach the Space URL can read the latest snapshot. POST is the only authenticated call. The stored account id is last-4 digits only.
+
+This repo does not deploy the Space. Copy `spaces/command-center-chat/` onto [Simzy/command-center-chat](https://huggingface.co/spaces/Simzy/command-center-chat) or the widget will keep reporting that `/api/robinhood` is missing.
+
+#### Agent: push a snapshot
+
+Use Casey’s **default individual** brokerage account (`brokerage_account_type` individual, `is_default`). If the nickname is empty, send `"label": "Individual"`. Send equity stock positions. Include `price` / `marketValue` only when you have a quote; `0` or `null` means no quote and the widget shows an em dash. `cryptoValue` is optional.
+
+```http
+POST https://simzy-command-center-chat.hf.space/api/robinhood
+Authorization: Bearer ${ROBINHOOD_BRIDGE_SECRET}
+Content-Type: application/json
+```
+
+If `ROBINHOOD_BRIDGE_SECRET` is not set on the Space, send `CHAT_BRIDGE_SECRET` instead. POST replaces the stored snapshot. GET returns `{ "snapshot": null }` until the first successful POST, then `{ "snapshot": { ... } }`.
+
+```json
+{
+  "updatedAt": "2026-09-28T15:04:00Z",
+  "account": { "label": "Individual", "last4": "6740" },
+  "totalValue": 118532.25,
+  "equityValue": 175464.27,
+  "cryptoValue": 26130.89,
+  "cash": -83062.91,
+  "currency": "USD",
+  "positions": [
+    { "symbol": "PLTR", "quantity": 149.998, "avgCost": 142.02, "price": 178.2, "marketValue": 26729.64, "dayChangePct": 1.2 }
+  ]
+}
+```
+
+The widget treats a snapshot older than 10 minutes as stale (`Updated 12m ago`). Empty state: **Waiting for first sync…**
+
 ## Shell map
 
 | Piece | Where |
@@ -215,8 +270,8 @@ Text max 8000 characters. `sessionId` must be a UUID. CORS allows the Pages orig
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
 
-Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, plus flagged `gmail` and `trading` empty stubs.
+Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, plus flagged `gmail` and `trading` empty stubs. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). Watchlist prices are not stored — only the symbol list.
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space.

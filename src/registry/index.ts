@@ -5,6 +5,7 @@ import { TodoWidget } from '@/components/widgets/TodoWidget';
 import { LinksWidget } from '@/components/widgets/LinksWidget';
 import { ImageGenWidget } from '@/components/widgets/ImageGenWidget';
 import { WatchlistWidget } from '@/components/widgets/WatchlistWidget';
+import { RobinhoodWidget } from '@/components/widgets/RobinhoodWidget';
 import { GmailStubWidget, TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
 import type { FeatureFlags } from '@/store/sessionStore';
 
@@ -81,6 +82,16 @@ registerWidget({
   defaultSize: { w: 6, h: 6 },
   minSize: { w: 3, h: 4 },
   component: WatchlistWidget,
+});
+
+registerWidget({
+  type: 'robinhood',
+  title: 'Robinhood',
+  description: 'Individual brokerage total and equity positions from the snapshot bridge. No orders.',
+  icon: 'brokerage',
+  defaultSize: { w: 12, h: 10 },
+  minSize: { w: 4, h: 6 },
+  component: RobinhoodWidget,
 });
 
 registerWidget({

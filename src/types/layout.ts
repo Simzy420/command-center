@@ -8,6 +8,7 @@ export type WidgetType =
   | 'links'
   | 'imagegen'
   | 'watchlist'
+  | 'robinhood'
   | 'gmail'
   | 'trading';
 
