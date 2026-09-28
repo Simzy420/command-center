@@ -205,14 +205,15 @@ Text max 8000 characters. `sessionId` must be a UUID. CORS allows the Pages orig
 
 ### Robinhood snapshot (same Space)
 
-The phone cannot call Robinhood or the Grok Bot Robinhood MCP. There is no Robinhood login in the Vite client. Chief of Staff (or a routine that already has the Robinhood MCP) **pushes** a portfolio snapshot to this Space. The Robinhood widget **polls** it about every 45 seconds.
+The phone cannot call Robinhood or the Grok Bot Robinhood MCP. There is no Robinhood login in the Vite client. Chief of Staff (or a routine that already has the Robinhood MCP) **pushes** a portfolio snapshot to this Space. The Robinhood widget re-reads that snapshot about every 30 seconds. **Refresh** asks the Space for a new pull and waits until a newer snapshot arrives.
 
 Host is the same chat Space. `api/generate-image.ts` is still unrelated. Do not add a second host.
 
 | | |
 | --- | --- |
 | GET (public) | `https://simzy-command-center-chat.hf.space/api/robinhood` |
-| POST (bearer) | same URL |
+| POST refresh (public) | `https://simzy-command-center-chat.hf.space/api/robinhood/refresh` |
+| POST snapshot (bearer) | `https://simzy-command-center-chat.hf.space/api/robinhood` |
 
 Phone resolution: System vault chat base → `VITE_CHAT_API_BASE` → the default Space, then `/api/robinhood`. Optional override: `VITE_ROBINHOOD_API_BASE` (origin only). **Never** put `ROBINHOOD_BRIDGE_SECRET`, `CHAT_BRIDGE_SECRET`, or a Robinhood token in a `VITE_` variable or in the phone vault.
 
@@ -225,7 +226,9 @@ On the Space → **Settings → Secrets**:
 | `ROBINHOOD_BRIDGE_SECRET` | Bearer token for `POST /api/robinhood`. Set this to use a secret that is not the chat reply token. |
 | `CHAT_BRIDGE_SECRET` | Used for `POST /api/robinhood` **only when `ROBINHOOD_BRIDGE_SECRET` is unset**. Chat replies always use this secret, not the Robinhood one. |
 
-GET is open so the phone can poll. Anyone who can reach the Space URL can read the latest snapshot. POST is the only authenticated call. The stored account id is last-4 digits only.
+GET is open so the phone can poll. Anyone who can reach the Space URL can read the latest snapshot. Snapshot POST and `DELETE /api/robinhood/refresh` use the bearer token. The public refresh POST is rate-limited (about one per 15 seconds per IP) and only stores a timestamp. The stored account id is last-4 digits only.
+
+**Refresh** does not call Robinhood. It stores a pending request. Chief of Staff must see `refreshPending` on `GET /api/robinhood` (or `GET /api/robinhood/pending-refresh`), pull Robinhood, and POST a new snapshot. That POST clears the pending file. Until then the widget keeps the last numbers, spins, and after about 45 seconds shows a waiting error.
 
 This repo does not deploy the Space. Copy `spaces/command-center-chat/` onto [Simzy/command-center-chat](https://huggingface.co/spaces/Simzy/command-center-chat) or the widget will keep reporting that `/api/robinhood` is missing.
 
@@ -239,7 +242,7 @@ Authorization: Bearer ${ROBINHOOD_BRIDGE_SECRET}
 Content-Type: application/json
 ```
 
-If `ROBINHOOD_BRIDGE_SECRET` is not set on the Space, send `CHAT_BRIDGE_SECRET` instead. POST replaces the stored snapshot. GET returns `{ "snapshot": null }` until the first successful POST, then `{ "snapshot": { ... } }`.
+If `ROBINHOOD_BRIDGE_SECRET` is not set on the Space, send `CHAT_BRIDGE_SECRET` instead. POST replaces the stored snapshot and clears a pending refresh. GET returns `{ "snapshot": null, "refreshPending": false }` until the first successful POST, then `{ "snapshot": { ... }, "refreshPending": false }`. A waiting refresh adds `"refreshPending": true` and `"refreshRequestedAt"`.
 
 ```json
 {

@@ -46,8 +46,11 @@ Copy the Grok Bot webhook URL and sender key into the Space secrets. Do **not** 
 - `POST /api/chat` `{ sessionId, clientMsgId, botId, botName, text, history? }` → `{ ok, clientMsgId }` and forwards JSON to `GROK_WEBHOOK_URL`
 - `GET /api/chat?sessionId=` → `{ messages: [...] }`
 - `POST /api/chat/reply` `Authorization: Bearer ${CHAT_BRIDGE_SECRET}` `{ sessionId, clientMsgId, botId, text, status: "partial"|"final" }`
-- `GET /api/robinhood` → `{ "snapshot": null }` or `{ "snapshot": { ... } }` (no auth, `Cache-Control: no-store`)
-- `POST /api/robinhood` `Authorization: Bearer ${ROBINHOOD_BRIDGE_SECRET}` replaces the stored snapshot. If that secret is unset, `CHAT_BRIDGE_SECRET` is accepted instead.
+- `GET /api/robinhood` → `{ "snapshot": null, "refreshPending": false }` or `{ "snapshot": { ... }, "refreshPending": false }` (no auth, `Cache-Control: no-store`). When a refresh is waiting on a newer snapshot, the body also includes `refreshPending: true` and `refreshRequestedAt`.
+- `POST /api/robinhood` `Authorization: Bearer ${ROBINHOOD_BRIDGE_SECRET}` replaces the stored snapshot and clears any pending refresh. If that secret is unset, `CHAT_BRIDGE_SECRET` is accepted instead.
+- `POST /api/robinhood/refresh` (public, no auth) stores a pending refresh. Rate limit is one request per 15 seconds per IP. Same path without the `/api` prefix.
+- `GET /api/robinhood/pending-refresh` (public) → `{ "refreshPending": bool, "refreshRequestedAt"?: string }` for Chief of Staff to poll without the snapshot body.
+- `DELETE /api/robinhood/refresh` uses the same bearer as the snapshot POST and clears the pending file. A successful snapshot POST already clears it.
 
 CORS allows `https://simzy420.github.io` and localhost. Text max 8000. `sessionId` must be a UUID.
 
@@ -79,3 +82,15 @@ Content-Type: application/json
 ```
 
 Push Casey’s default individual brokerage account. Empty nickname → `"label": "Individual"`. Equity positions only in `positions`. `price` / `marketValue` of `0` or `null` means no live quote.
+
+### Phone refresh (Chief of Staff must fulfill)
+
+The phone never calls Robinhood. **Refresh** does `POST /api/robinhood/refresh`, which writes `robinhood-refresh.json` next to the snapshot:
+
+```json
+{ "requestedAt": "2026-09-28T15:04:00Z" }
+```
+
+`refreshPending` is true when that file exists and there is no snapshot yet, or `requestedAt` is later than `snapshot.updatedAt`.
+
+Chief of Staff (or a webhook) must notice the pending flag — poll `GET /api/robinhood` or `GET /api/robinhood/pending-refresh` — pull Robinhood, and `POST /api/robinhood` with a new snapshot. That POST clears the pending file. This repo does not change CoS routines. Until the push lands, the phone keeps the last snapshot and, after about 45 seconds, shows a waiting error.

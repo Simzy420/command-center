@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { fetchRobinhoodSnapshot } from '@/adapters/robinhood/bridge';
+import { fetchRobinhoodSnapshot, requestRobinhoodRefresh } from '@/adapters/robinhood/bridge';
 import {
   ROBINHOOD_POLL_MS,
+  ROBINHOOD_REFRESH_POLL_MS,
+  ROBINHOOD_REFRESH_TIMEOUT_MS,
+  ROBINHOOD_REFRESH_WAIT_MESSAGE,
   formatChangePct,
   formatMoney,
   formatQty,
   formatSnapshotAge,
   liveMarketValue,
   livePrice,
+  snapshotIsFresher,
   type RobinhoodPosition,
   type RobinhoodSnapshot,
 } from '@/adapters/robinhood/snapshot';
@@ -19,6 +23,12 @@ import type { WidgetRenderProps } from '@/registry/types';
 type Load =
   | { kind: 'wait' }
   | { kind: 'ready'; snapshot: RobinhoodSnapshot | null; error: string | null };
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; onRefresh: () => void }) {
   return (
@@ -137,23 +147,41 @@ function Portfolio({
   );
 }
 
+// Refresh stores a pending request on the chat Space, then polls until Chief of Staff
+// pushes a newer snapshot. CoS must watch `refreshPending` on GET /api/robinhood and POST
+// the snapshot. This phone never talks to Robinhood. The 30s timer only re-reads the Space.
 export function RobinhoodWidget({ widget }: WidgetRenderProps) {
   const [load, setLoad] = useState<Load>({ kind: 'wait' });
   const [refreshing, setRefreshing] = useState(false);
+  const [awaitingSync, setAwaitingSync] = useState(false);
   const epoch = useRef(0);
+  const awaiting = useRef(false);
+  const shownUpdatedAt = useRef<string | null>(null);
   const snapshot = load.kind === 'ready' ? load.snapshot : null;
   const error = load.kind === 'ready' ? load.error : null;
   const age = snapshot ? formatSnapshotAge(snapshot.updatedAt) : null;
 
-  const refresh = useCallback(async () => {
+  const loadOnce = useCallback(async () => {
+    if (awaiting.current) return;
     const ticket = ++epoch.current;
     setRefreshing(true);
     try {
       const next = await fetchRobinhoodSnapshot();
-      if (ticket !== epoch.current) return;
-      setLoad({ kind: 'ready', snapshot: next, error: null });
+      if (ticket !== epoch.current || awaiting.current) return;
+      shownUpdatedAt.current = next.snapshot?.updatedAt ?? null;
+      setLoad((prev) => {
+        const previousStamp = prev.kind === 'ready' ? (prev.snapshot?.updatedAt ?? null) : null;
+        const nextStamp = next.snapshot?.updatedAt ?? null;
+        const keepWait =
+          prev.kind === 'ready' && prev.error === ROBINHOOD_REFRESH_WAIT_MESSAGE && previousStamp === nextStamp;
+        return {
+          kind: 'ready',
+          snapshot: next.snapshot,
+          error: keepWait ? ROBINHOOD_REFRESH_WAIT_MESSAGE : null,
+        };
+      });
     } catch (err) {
-      if (ticket !== epoch.current) return;
+      if (ticket !== epoch.current || awaiting.current) return;
       const message = err instanceof Error ? err.message : 'Snapshot fetch failed.';
       setLoad((prev) => ({
         kind: 'ready',
@@ -161,33 +189,100 @@ export function RobinhoodWidget({ widget }: WidgetRenderProps) {
         error: message,
       }));
     } finally {
-      if (ticket === epoch.current) setRefreshing(false);
+      if (ticket === epoch.current && !awaiting.current) setRefreshing(false);
+    }
+  }, []);
+
+  const requestLive = useCallback(async () => {
+    if (awaiting.current) return;
+    const ticket = ++epoch.current;
+    const previousUpdatedAt = shownUpdatedAt.current;
+    awaiting.current = true;
+    setRefreshing(true);
+    setAwaitingSync(true);
+    setLoad((prev) =>
+      prev.kind === 'ready' ? { kind: 'ready', snapshot: prev.snapshot, error: null } : { kind: 'wait' },
+    );
+    try {
+      const asked = await requestRobinhoodRefresh();
+      if (ticket !== epoch.current) return;
+      const deadline = Date.now() + ROBINHOOD_REFRESH_TIMEOUT_MS;
+      while (Date.now() < deadline) {
+        if (ticket !== epoch.current) return;
+        try {
+          const next = await fetchRobinhoodSnapshot();
+          if (ticket !== epoch.current) return;
+          if (snapshotIsFresher(next.snapshot?.updatedAt, previousUpdatedAt, asked.requestedAt)) {
+            shownUpdatedAt.current = next.snapshot?.updatedAt ?? null;
+            setLoad({ kind: 'ready', snapshot: next.snapshot, error: null });
+            return;
+          }
+        } catch {
+          // A missed poll is not fatal. Keep waiting for Chief of Staff until the timeout.
+        }
+        const wait = Math.min(ROBINHOOD_REFRESH_POLL_MS, deadline - Date.now());
+        if (wait <= 0) break;
+        await delay(wait);
+      }
+      if (ticket !== epoch.current) return;
+      setLoad((prev) => ({
+        kind: 'ready',
+        snapshot: prev.kind === 'ready' ? prev.snapshot : null,
+        error: ROBINHOOD_REFRESH_WAIT_MESSAGE,
+      }));
+    } catch (err) {
+      if (ticket !== epoch.current) return;
+      const message = err instanceof Error ? err.message : 'Snapshot refresh failed.';
+      setLoad((prev) => ({
+        kind: 'ready',
+        snapshot: prev.kind === 'ready' ? prev.snapshot : null,
+        error: message,
+      }));
+    } finally {
+      if (ticket === epoch.current) {
+        awaiting.current = false;
+        setAwaitingSync(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    void refresh();
+    void loadOnce();
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'hidden') return;
-      void refresh();
+      void loadOnce();
     }, ROBINHOOD_POLL_MS);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void refresh();
+      if (document.visibilityState === 'visible') void loadOnce();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
       epoch.current += 1;
+      awaiting.current = false;
     };
-  }, [refresh]);
+  }, [loadOnce]);
 
-  const badge = !snapshot ? (error ? 'ERR' : 'WAIT') : error ? 'ERR' : age?.stale ? 'STALE' : 'LIVE';
-  const footer = snapshot
-    ? `${age?.label ?? 'Updated time unknown'}${error ? ' · last snapshot kept' : ''}`
-    : error
-      ? 'Sync failed'
-      : 'Waiting for first sync…';
+  const badge = awaitingSync
+    ? 'WAIT'
+    : !snapshot
+      ? error
+        ? 'ERR'
+        : 'WAIT'
+      : error
+        ? 'ERR'
+        : age?.stale
+          ? 'STALE'
+          : 'LIVE';
+  const footer = awaitingSync
+    ? 'Waiting for Chief of Staff sync…'
+    : snapshot
+      ? `${age?.label ?? 'Updated time unknown'}${error ? ' · last snapshot kept' : ''}`
+      : error
+        ? 'Sync failed'
+        : 'Waiting for first sync…';
 
   return (
     <WidgetFrame
@@ -199,13 +294,18 @@ export function RobinhoodWidget({ widget }: WidgetRenderProps) {
       {error ? (
         <div className="mb-3 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2" role="alert">
           <p className="text-sm leading-relaxed text-rose-100">{error}</p>
-          <button type="button" className="hud-btn-ghost widget-no-drag mt-2 w-full" onClick={() => void refresh()}>
+          <button
+            type="button"
+            className="hud-btn-ghost widget-no-drag mt-2 w-full"
+            onClick={() => void requestLive()}
+            disabled={refreshing}
+          >
             Retry
           </button>
         </div>
       ) : null}
       {snapshot ? (
-        <Portfolio snapshot={snapshot} refreshing={refreshing} onRefresh={() => void refresh()} />
+        <Portfolio snapshot={snapshot} refreshing={refreshing} onRefresh={() => void requestLive()} />
       ) : (
         <div className="flex min-h-[8rem] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-black/20 px-4 py-6 text-center">
           {error ? null : (
@@ -214,7 +314,7 @@ export function RobinhoodWidget({ widget }: WidgetRenderProps) {
           <p className="text-sm leading-relaxed text-white/50">
             Chief of Staff pushes the individual brokerage snapshot. This phone never logs in to Robinhood.
           </p>
-          {error ? null : <RefreshButton refreshing={refreshing} onRefresh={() => void refresh()} />}
+          {error ? null : <RefreshButton refreshing={refreshing} onRefresh={() => void requestLive()} />}
         </div>
       )}
     </WidgetFrame>

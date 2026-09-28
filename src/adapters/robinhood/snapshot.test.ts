@@ -6,6 +6,7 @@ import {
   livePrice,
   maskLast4,
   normalizeSnapshot,
+  snapshotIsFresher,
 } from './snapshot.ts';
 
 const sample = {
@@ -44,6 +45,18 @@ test('drops a full account number stuffed into the label', () => {
     positions: [],
   });
   assert.equal(snapshot?.account.label, 'Individual');
+});
+
+test('refresh treats a snapshot as new only when its timestamp moves forward', () => {
+  const previous = '2026-09-28T15:00:00Z';
+  const requested = '2026-09-28T15:10:00Z';
+  assert.equal(snapshotIsFresher(previous, previous, requested), false);
+  assert.equal(snapshotIsFresher('2026-09-28T15:10:30Z', previous, requested), true);
+  // Brokerage clocks can stamp the push earlier than the phone's request.
+  assert.equal(snapshotIsFresher('2026-09-28T15:05:00Z', previous, requested), true);
+  assert.equal(snapshotIsFresher(previous, null, requested), false);
+  assert.equal(snapshotIsFresher(requested, null, requested), false);
+  assert.equal(snapshotIsFresher('2026-09-28T15:10:01Z', null, requested), true);
 });
 
 test('age label and stale threshold', () => {
