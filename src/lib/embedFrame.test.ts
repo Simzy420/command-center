@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { embedFrameAccepted } from './extend.ts';
+import { embedFrameAccepted } from './embedFrame.ts';
 
 test('a blocked frame is the accessible about:blank document', () => {
   assert.equal(
@@ -17,7 +17,7 @@ test('a cross-origin frame counts as accepted', () => {
   assert.equal(embedFrameAccepted({ contentDocument: null, contentWindow: {} }), true);
   assert.equal(
     embedFrameAccepted({
-      contentDocument: { location: { href: 'https://simzy-wan22-extend.hf.space/' } },
+      contentDocument: { location: { href: 'https://swapr-casey.netlify.app/' } },
       contentWindow: {},
     }),
     true,

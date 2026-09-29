@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { normalizeImageGenModel } from './imageModel.ts';
 
-test('image model persists stills, wan22, and wanExtend', () => {
+test('image model persists stills, wan22, wanExtend, and swapr', () => {
   assert.equal(normalizeImageGenModel('stills'), 'stills');
   assert.equal(normalizeImageGenModel('wan22'), 'wan22');
   assert.equal(normalizeImageGenModel('wanExtend'), 'wanExtend');
+  assert.equal(normalizeImageGenModel('swapr'), 'swapr');
 });
 
 test('unknown image model falls back to stills', () => {

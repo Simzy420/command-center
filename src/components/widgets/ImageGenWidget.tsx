@@ -5,6 +5,7 @@ import { StillProviderSwitch } from '@/components/image/StillProviderSwitch';
 import type { GeneratedImage } from '@/adapters/imagegen';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { Wan22Panel } from '@/components/widgets/Wan22Panel';
+import { SwaprPanel } from '@/components/widgets/SwaprPanel';
 import { WanExtendPanel } from '@/components/widgets/WanExtendPanel';
 import { cn } from '@/lib/cn';
 import { useImageStore, type ImageGenModel } from '@/store/imageStore';
@@ -17,7 +18,7 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
 
   return (
     <WidgetFrame widget={widget} title="Image gen">
-      <div className="mb-3 grid grid-cols-3 gap-2" role="group" aria-label="Image model">
+      <div className="mb-3 grid grid-cols-2 gap-2" role="group" aria-label="Image model">
         <button
           type="button"
           aria-pressed={model === 'stills'}
@@ -51,6 +52,17 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
         >
           Wan Extend
         </button>
+        <button
+          type="button"
+          aria-pressed={model === 'swapr'}
+          className={cn(
+            'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
+            model === 'swapr' && 'hud-btn-primary',
+          )}
+          onClick={() => setModel('swapr')}
+        >
+          Swapr
+        </button>
       </div>
       <ModelPanel model={model} />
     </WidgetFrame>
@@ -60,6 +72,7 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
 function ModelPanel({ model }: { model: ImageGenModel }) {
   if (model === 'wan22') return <Wan22Panel />;
   if (model === 'wanExtend') return <WanExtendPanel />;
+  if (model === 'swapr') return <SwaprPanel />;
   return <StillsPanel />;
 }
 
