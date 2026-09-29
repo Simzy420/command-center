@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
+import { OpenAiKeyFields } from '@/components/image/OpenAiKeyFields';
+import { StillProviderSwitch } from '@/components/image/StillProviderSwitch';
 import type { GeneratedImage } from '@/adapters/imagegen';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { Wan22Panel } from '@/components/widgets/Wan22Panel';
@@ -41,13 +43,27 @@ function StillsPanel() {
   const error = useImageStore((s) => s.error);
   const generate = useImageStore((s) => s.generate);
   const clearError = useImageStore((s) => s.clearError);
+  const stillProvider = useImageStore((s) => s.stillProvider);
   const hasKey = useVaultStore((s) => s.hasKey);
   const [prompt, setPrompt] = useState('');
-  const provider = shouldUseImageProxy() || hasKey ? 'OpenAI' : 'Pollinations';
+  const proxy = shouldUseImageProxy();
+  const emptyCopy =
+    stillProvider === 'openai'
+      ? proxy
+        ? 'Type a prompt and tap Gen. Pictures come from OpenAI on this host.'
+        : hasKey
+          ? 'Type a prompt and tap Gen. Pictures come from OpenAI.'
+          : 'Paste an OpenAI key above, or switch to Pollinations (free).'
+      : 'Type a prompt and tap Gen. Pictures load from Pollinations — no API key.';
 
   return (
     <>
-      <p className="mb-2 text-[11px] uppercase tracking-wider text-fuchsia-200/70">Agent renders · {provider}</p>
+      <StillProviderSwitch className="sticky top-0 z-10 -mx-3 mb-3 bg-[#0c1430] px-3 py-2" />
+      {stillProvider === 'openai' ? (
+        <OpenAiKeyFields />
+      ) : (
+        <p className="mb-2 text-[11px] uppercase tracking-wider text-fuchsia-200/70">Free · no API key</p>
+      )}
       <form
         className="mb-3 flex gap-2"
         onSubmit={(e) => {
@@ -78,9 +94,7 @@ function StillsPanel() {
         ))}
         {images.length === 0 && !busy ? (
           <p className="col-span-2 rounded-2xl border border-dashed border-white/15 px-3 py-8 text-center text-sm text-white/45">
-            {provider === 'OpenAI'
-              ? 'Type a prompt and tap Gen. Pictures come from OpenAI.'
-              : 'Type a prompt and tap Gen. Pictures load from Pollinations — no API key. Save an OpenAI key in System to switch.'}
+            {emptyCopy}
           </p>
         ) : null}
       </div>

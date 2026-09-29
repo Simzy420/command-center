@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { getImageGenAdapter, type GeneratedImage } from '@/adapters/imagegen';
+import {
+  getImageGenAdapter,
+  normalizeStillImageProvider,
+  type GeneratedImage,
+  type StillImageProvider,
+} from '@/adapters/imagegen';
 import {
   generateWanVideo,
   isCorsFailure,
@@ -14,6 +19,7 @@ import { useFilesStore } from '@/store/filesStore';
 
 const KEY = 'images';
 const MODEL_KEY = 'imageModel';
+const PROVIDER_KEY = 'imageProvider';
 const VIDEOS_KEY = 'videos';
 
 export type ImageGenModel = 'stills' | 'wan22';
@@ -26,6 +32,10 @@ function load(): GeneratedImage[] {
 function loadModel(): ImageGenModel {
   const raw = readJson<ImageGenModel>(MODEL_KEY, 'stills');
   return raw === 'wan22' ? 'wan22' : 'stills';
+}
+
+function loadStillProvider(): StillImageProvider {
+  return normalizeStillImageProvider(readJson<unknown>(PROVIDER_KEY, 'pollinations'));
 }
 
 function loadVideos(): GeneratedVideo[] {
@@ -46,6 +56,7 @@ interface ImageState {
   images: GeneratedImage[];
   videos: GeneratedVideo[];
   model: ImageGenModel;
+  stillProvider: StillImageProvider;
   busy: boolean;
   wanBusy: boolean;
   wanProgress: string | null;
@@ -53,6 +64,7 @@ interface ImageState {
   wanError: string | null;
   corsBlocked: boolean;
   setModel: (model: ImageGenModel) => void;
+  setStillProvider: (provider: StillImageProvider) => void;
   generate: (prompt: string, count: number) => Promise<void>;
   generateVideo: (input: WanGenerateInput) => Promise<void>;
   setCorsBlocked: (blocked: boolean) => void;
@@ -73,10 +85,15 @@ function saveModel(model: ImageGenModel) {
   writeJson(MODEL_KEY, model);
 }
 
+function saveStillProvider(provider: StillImageProvider) {
+  writeJson(PROVIDER_KEY, provider);
+}
+
 export const useImageStore = create<ImageState>((set, get) => ({
   images: load(),
   videos: loadVideos(),
   model: loadModel(),
+  stillProvider: loadStillProvider(),
   busy: false,
   wanBusy: false,
   wanProgress: null,
@@ -87,12 +104,16 @@ export const useImageStore = create<ImageState>((set, get) => ({
     saveModel(model);
     set({ model });
   },
+  setStillProvider: (stillProvider) => {
+    saveStillProvider(stillProvider);
+    set({ stillProvider, error: null });
+  },
   setCorsBlocked: (corsBlocked) => set({ corsBlocked }),
   generate: async (prompt, count) => {
     const trimmed = prompt.trim();
     if (!trimmed || get().busy) return;
     set({ busy: true, error: null });
-    const adapter = getImageGenAdapter();
+    const adapter = getImageGenAdapter(get().stillProvider);
     try {
       const batch = await adapter.generate({ prompt: trimmed, count });
       const images = capHistory([...batch, ...get().images]);

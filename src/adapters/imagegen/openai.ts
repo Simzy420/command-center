@@ -18,7 +18,9 @@ export const openaiVaultAdapter: ImageGenAdapter = {
   label: 'OpenAI',
   async generate({ prompt, count }: ImageGenInput) {
     const apiKey = readVaultOpenAiKey();
-    if (!apiKey) throw new Error('No OpenAI key saved. Add one in System, or Gen will use Pollinations.');
+    if (!apiKey) {
+      throw new Error('No OpenAI key saved. Paste one in Image gen, or switch to Pollinations (free).');
+    }
     try {
       const frames = await requestOpenAiImages({ apiKey, prompt, count });
       return toGenerated(prompt.trim(), frames, 'openai');
