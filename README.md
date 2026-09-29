@@ -123,7 +123,9 @@ Optional override: `VITE_MARKET_API_BASE` — a root that serves the same `/simp
 
 ### Wan 2.2 (image-to-video)
 
-Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Stills have a **Pollinations (free) | OpenAI** switch (saved as `cc.v1.imageProvider`). Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
+Image gen has a **Stills | Wan 2.2 | Wan Extend** switch (saved as `cc.v1.imageModel`: `stills`, `wan22`, or `wanExtend`). Stills have a **Pollinations (free) | OpenAI** switch (saved as `cc.v1.imageProvider`). Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
+
+**Wan Extend** opens the Runpod-backed Space [simzy-wan22-extend](https://simzy-wan22-extend.hf.space/) in a new tab and embeds it when the Space allows framing. The phone does not call Runpod. The first run can take a few minutes while the Runpod worker starts.
 
 ### Real chat (Chief of Staff)
 

@@ -5,8 +5,9 @@ import { StillProviderSwitch } from '@/components/image/StillProviderSwitch';
 import type { GeneratedImage } from '@/adapters/imagegen';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { Wan22Panel } from '@/components/widgets/Wan22Panel';
+import { WanExtendPanel } from '@/components/widgets/WanExtendPanel';
 import { cn } from '@/lib/cn';
-import { useImageStore } from '@/store/imageStore';
+import { useImageStore, type ImageGenModel } from '@/store/imageStore';
 import { useVaultStore } from '@/store/vaultStore';
 import type { WidgetRenderProps } from '@/registry/types';
 
@@ -16,25 +17,50 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
 
   return (
     <WidgetFrame widget={widget} title="Image gen">
-      <div className="mb-3 grid grid-cols-2 gap-2">
+      <div className="mb-3 grid grid-cols-3 gap-2" role="group" aria-label="Image model">
         <button
           type="button"
-          className={cn('hud-btn-ghost min-h-[48px] text-sm', model === 'stills' && 'hud-btn-primary')}
+          aria-pressed={model === 'stills'}
+          className={cn(
+            'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
+            model === 'stills' && 'hud-btn-primary',
+          )}
           onClick={() => setModel('stills')}
         >
           Stills
         </button>
         <button
           type="button"
-          className={cn('hud-btn-ghost min-h-[48px] text-sm', model === 'wan22' && 'hud-btn-primary')}
+          aria-pressed={model === 'wan22'}
+          className={cn(
+            'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
+            model === 'wan22' && 'hud-btn-primary',
+          )}
           onClick={() => setModel('wan22')}
         >
           Wan 2.2
         </button>
+        <button
+          type="button"
+          aria-pressed={model === 'wanExtend'}
+          className={cn(
+            'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
+            model === 'wanExtend' && 'hud-btn-primary',
+          )}
+          onClick={() => setModel('wanExtend')}
+        >
+          Wan Extend
+        </button>
       </div>
-      {model === 'wan22' ? <Wan22Panel /> : <StillsPanel />}
+      <ModelPanel model={model} />
     </WidgetFrame>
   );
+}
+
+function ModelPanel({ model }: { model: ImageGenModel }) {
+  if (model === 'wan22') return <Wan22Panel />;
+  if (model === 'wanExtend') return <WanExtendPanel />;
+  return <StillsPanel />;
 }
 
 function StillsPanel() {
