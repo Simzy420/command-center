@@ -13,6 +13,7 @@ import {
   type WanGenerateInput,
 } from '@/adapters/wan';
 import { uid } from '@/lib/ids';
+import { normalizeImageGenModel, type ImageGenModel } from '@/store/imageModel';
 import { readJson, writeJson } from '@/store/persist';
 import { useActivityStore } from '@/store/activityStore';
 import { useFilesStore } from '@/store/filesStore';
@@ -22,7 +23,7 @@ const MODEL_KEY = 'imageModel';
 const PROVIDER_KEY = 'imageProvider';
 const VIDEOS_KEY = 'videos';
 
-export type ImageGenModel = 'stills' | 'wan22';
+export type { ImageGenModel } from '@/store/imageModel';
 
 function load(): GeneratedImage[] {
   const raw = readJson<GeneratedImage[]>(KEY, []);
@@ -30,8 +31,7 @@ function load(): GeneratedImage[] {
 }
 
 function loadModel(): ImageGenModel {
-  const raw = readJson<ImageGenModel>(MODEL_KEY, 'stills');
-  return raw === 'wan22' ? 'wan22' : 'stills';
+  return normalizeImageGenModel(readJson<unknown>(MODEL_KEY, 'stills'));
 }
 
 function loadStillProvider(): StillImageProvider {
