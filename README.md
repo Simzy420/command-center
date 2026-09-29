@@ -94,7 +94,7 @@ Adapters sit behind interfaces so mocks can be replaced without touching widgets
 | Concern | Interface | Default | Swap point |
 | --- | --- | --- | --- |
 | Chat streaming | `ChatAdapter` | Chief of Staff bridge (`src/adapters/chat/bridge.ts`). Mock only if `VITE_CHAT_MOCK=1` | `src/adapters/chat/index.ts` (`getChatAdapter`) |
-| Image generation | `ImageGenAdapter` | OpenAI if a device key or Vercel proxy is present, else Pollinations | `src/adapters/imagegen/index.ts` (`getImageGenAdapter`) |
+| Image generation | `ImageGenAdapter` | Pollinations unless stills are switched to OpenAI | `src/adapters/imagegen/index.ts` (`getImageGenAdapter`) |
 | Image-to-video | Wan 2.2 Gradio client | Public Space `kulkas2pintu/wan222` (no token) | `src/adapters/wan/gradio.ts` |
 | Watchlist quotes | `MarketAdapter` | CoinGecko public `simple/price` (no key, no mock) | `src/adapters/market/index.ts` (`getMarketAdapter`) |
 
@@ -102,8 +102,8 @@ A replacement adapter must implement the same interface as the one it swaps. Wid
 
 ### Image gen keys
 
-- **GitHub Pages (this PWA):** paste an OpenAI key in **System → Image vault**. It stays in this browser’s `localStorage` (`cc.v1.vault.openai`). Never commit keys. Without a key, Image gen uses Pollinations.
-- **Vercel:** set `OPENAI_API_KEY` in the project Environment Variables (server only). Set `VITE_IMAGE_PROXY=1` so the client calls `/api/generate-image` instead of sending a key from the phone. Host at the deployment root so the proxy path works.
+- **GitHub Pages (this PWA):** stills default to **Pollinations (free)** — no key. Switch to **OpenAI** in the Image gen widget or **System → Image vault**, then paste a key. The choice is `cc.v1.imageProvider`. The key stays in this browser’s `localStorage` (`cc.v1.vault.openai`). Never commit keys. Pollinations does not read the key.
+- **Vercel:** set `OPENAI_API_KEY` in the project Environment Variables (server only). Set `VITE_IMAGE_PROXY=1` so choosing **OpenAI** calls `/api/generate-image` instead of sending a key from the phone. **Pollinations (free)** still skips that proxy. Host at the deployment root so the proxy path works.
 
 Do not put `OPENAI_API_KEY` in any `VITE_` variable or client source.
 
@@ -123,7 +123,7 @@ Optional override: `VITE_MARKET_API_BASE` — a root that serves the same `/simp
 
 ### Wan 2.2 (image-to-video)
 
-Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Stills stay on OpenAI/Pollinations. Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
+Image gen has a **Stills | Wan 2.2** switch (saved as `cc.v1.imageModel`). Stills have a **Pollinations (free) | OpenAI** switch (saved as `cc.v1.imageProvider`). Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
 
 ### Real chat (Chief of Staff)
 
@@ -277,4 +277,4 @@ Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robi
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space.
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space.

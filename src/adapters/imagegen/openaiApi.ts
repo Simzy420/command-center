@@ -92,7 +92,7 @@ export async function requestOpenAiImages(input: {
 export function explainOpenAiNetworkError(err: unknown): Error {
   if (err instanceof TypeError) {
     return new Error(
-      'Could not reach OpenAI from this page (often CORS on GitHub Pages). Save the key for later, deploy the Vercel proxy, or use Pollinations.',
+      'Could not reach OpenAI from this page (often CORS on GitHub Pages). Switch to Pollinations (free), or use a host with the image proxy.',
     );
   }
   return err instanceof Error ? err : new Error('OpenAI request failed.');

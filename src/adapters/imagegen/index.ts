@@ -1,20 +1,23 @@
 import type { ImageGenAdapter } from './types';
 import { openaiProxyAdapter, openaiVaultAdapter, shouldUseImageProxy } from './openai';
 import { pollinationsImageAdapter } from './pollinations';
-import { readVaultOpenAiKey } from '@/store/vaultStore';
+import { stillAdapterKind, type StillImageProvider } from './provider';
 
-export function getImageGenAdapter(): ImageGenAdapter {
-  if (shouldUseImageProxy()) return openaiProxyAdapter;
-  if (readVaultOpenAiKey()) return openaiVaultAdapter;
+export function getImageGenAdapter(provider: StillImageProvider): ImageGenAdapter {
+  const kind = stillAdapterKind(provider, shouldUseImageProxy());
+  if (kind === 'openai-proxy') return openaiProxyAdapter;
+  if (kind === 'openai-vault') return openaiVaultAdapter;
   return pollinationsImageAdapter;
 }
 
-export function imageGenProviderLabel(): string {
-  return getImageGenAdapter().label;
+export function imageGenProviderLabel(provider: StillImageProvider): string {
+  return getImageGenAdapter(provider).label;
 }
 
 export { mockImageAdapter } from './mock';
 export { pollinationsImageAdapter } from './pollinations';
 export { openaiVaultAdapter, openaiProxyAdapter, shouldUseImageProxy } from './openai';
+export { normalizeStillImageProvider, stillAdapterKind } from './provider';
+export type { StillAdapterKind, StillImageProvider } from './provider';
 
 export type { ImageGenAdapter, GeneratedImage, ImageGenInput, ImagePreview } from './types';
