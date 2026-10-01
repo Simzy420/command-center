@@ -6,11 +6,27 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import ffmpegStatic from 'ffmpeg-static';
+import ffprobeStatic from 'ffprobe-static';
 import {
   DEFAULT_ANIMATE_ENDPOINT_ID,
   runpodApiKey,
   runpodEndpointId,
 } from './account.ts';
+
+function ffmpegBin() {
+  return (typeof ffmpegStatic === 'string' && ffmpegStatic) || 'ffmpeg';
+}
+
+function ffprobeBin() {
+  const path = (ffprobeStatic as { path?: string } | string | null) &&
+    typeof ffprobeStatic === 'object' &&
+    ffprobeStatic &&
+    'path' in ffprobeStatic
+    ? ffprobeStatic.path
+    : null;
+  return path || 'ffprobe';
+}
 
 export const DEFAULT_NEGATIVE =
   'blurry, low quality, distorted, random prop, wrong object, microphone, bottle, cup, dark cylinder near face, handheld object unless described in the prompt';
@@ -92,7 +108,7 @@ export async function probeVideoSize(filePath: string) {
     filePath,
   ];
   const out = await new Promise<string>((resolve, reject) => {
-    const child = spawn('ffprobe', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(ffprobeBin(), args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (c) => {
@@ -133,7 +149,7 @@ export async function prepareMotionVideo(
     await writeFile(inputPath, inputBytes);
     const size = await probeVideoSize(inputPath);
     const filter = headroomPadFilter(size.width, size.height, deps.topFrac ?? 0.28);
-    const ffmpeg = deps.ffmpegBin || 'ffmpeg';
+    const ffmpeg = deps.ffmpegBin || ffmpegBin();
     await runCmd(ffmpeg, [
       '-y',
       '-i',

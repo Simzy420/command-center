@@ -13,6 +13,8 @@ export const config = {
     'src/adapters/runpod/animate.js',
     'src/adapters/runpod/account.js',
     'src/adapters/swapr/constants.js',
+    'node_modules/ffmpeg-static/**',
+    'node_modules/ffprobe-static/**',
   ],
 };
 
