@@ -3,6 +3,9 @@ dist
 .vercel
 src/adapters/imagegen/openaiApi.js
 src/adapters/runpod/account.js
+src/adapters/runpod/animate.js
+src/adapters/runpod/jobBridge.js
+src/adapters/swapr/constants.js
 dist-ssr
 *.local
 .DS_Store

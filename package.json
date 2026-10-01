@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/prepare-vercel-output.mjs",
-    "vercel-build": "esbuild src/adapters/imagegen/openaiApi.ts --platform=node --format=esm --outfile=src/adapters/imagegen/openaiApi.js && esbuild src/adapters/runpod/account.ts --platform=node --format=esm --outfile=src/adapters/runpod/account.js",
+    "vercel-build": "esbuild src/adapters/imagegen/openaiApi.ts --platform=node --format=esm --outfile=src/adapters/imagegen/openaiApi.js && esbuild src/adapters/runpod/account.ts src/adapters/runpod/animate.ts src/adapters/runpod/jobBridge.ts src/adapters/swapr/constants.ts --platform=node --format=esm --outdir=src --outbase=src",
     "preview": "vite preview"
   },
   "dependencies": {

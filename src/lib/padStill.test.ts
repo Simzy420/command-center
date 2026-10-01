@@ -7,7 +7,7 @@ test('planStillPad keeps a tight portrait fully inside the landscape aspect', ()
   assert.equal(plan.drawWidth, 900);
   assert.equal(plan.drawHeight, 1100);
   assert.ok(plan.padTop > plan.padBottom, 'headroom should exceed bottom pad');
-  assert.ok(plan.padTop >= Math.round(1100 * 0.28));
+  assert.ok(plan.padTop >= Math.round(1100 * 0.4));
   const aspect = plan.canvasWidth / plan.canvasHeight;
   assert.ok(Math.abs(aspect - WAN_ANIMATE_ASPECT) < 0.02);
   assert.equal(plan.drawX + plan.drawWidth + plan.padRight, plan.canvasWidth);
@@ -25,6 +25,6 @@ test('planStillPad never shrinks the source (no crop)', () => {
 test('square close-ups get side and top padding', () => {
   const plan = planStillPad(640, 640);
   assert.ok(plan.padLeft >= Math.round(640 * 0.14));
-  assert.ok(plan.padTop >= Math.round(640 * 0.28));
+  assert.ok(plan.padTop >= Math.round(640 * 0.4));
   assert.ok(plan.canvasWidth / plan.canvasHeight > 1);
 });

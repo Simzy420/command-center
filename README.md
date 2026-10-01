@@ -127,7 +127,11 @@ Image gen has a **Stills | Wan 2.2 | Wan Extend | Swapr** switch (saved as `cc.v
 
 **Wan Extend** opens the Runpod-backed Space [simzy-wan22-extend](https://simzy-wan22-extend.hf.space/) in a new tab and embeds it when the Space allows framing. **Swapr / Become the Character** runs natively in the Image gen widget: scroll motions from the HF catalog, upload a still, Generate posts to [swapr-casey.netlify.app](https://swapr-casey.netlify.app/) `/api/generate` (Wan Animate on Runpod). Close-up stills are padded with headroom before upload so faces are not cropped. Results include **Download** and **Save to photo gallery** (Web Share → Save Video on iPhone).
 
-On **Vercel**, set server-only `RUNPOD_API_KEY` (and optional `RUNPOD_ENDPOINT_ID`, default `zrmwpir4qzs66s`) for the live **Runpod balance** counter and **Stop GPU** button (`/api/runpod-status`, `/api/runpod-stop`). Do not put that key in any `VITE_` variable. On GitHub Pages, set `VITE_RUNPOD_API_BASE` to your Vercel deployment origin so those controls still work. **Open hosted app** still links to the Netlify site. The first Generate can take a few minutes while the Runpod worker starts.
+On **Vercel**, set server-only `RUNPOD_API_KEY` (and optional `RUNPOD_ENDPOINT_ID`, default `zrmwpir4qzs66s`) for:
+- live **Runpod balance** + **Stop GPU** (`/api/runpod-status`, `/api/runpod-stop`)
+- the preferred Generate path (`/api/swapr-generate`) which pads the driving clip with headroom and picks portrait/landscape frame size from the motion video (avoids crushing vertical clips into 832×480)
+
+Do not put that key in any `VITE_` variable. On GitHub Pages, set `VITE_RUNPOD_API_BASE` to your Vercel deployment origin so those controls and the padded Generate path still work. Without the key, Generate falls back to the Netlify proxy with a padded still only. **Open hosted app** still links to the Netlify site. The first Generate can take a few minutes while the Runpod worker starts.
 
 ### Real chat (Chief of Staff)
 

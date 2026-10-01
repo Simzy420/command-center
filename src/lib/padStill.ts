@@ -41,9 +41,9 @@ export function planStillPad(
 ): StillPadPlan {
   const srcW = Math.max(1, Math.round(sourceWidth));
   const srcH = Math.max(1, Math.round(sourceHeight));
-  const topFrac = options.topFrac ?? 0.28;
-  const sideFrac = options.sideFrac ?? 0.14;
-  const bottomFrac = options.bottomFrac ?? 0.12;
+  const topFrac = options.topFrac ?? 0.4;
+  const sideFrac = options.sideFrac ?? 0.16;
+  const bottomFrac = options.bottomFrac ?? 0.14;
   const targetAspect = options.targetAspect ?? WAN_ANIMATE_ASPECT;
 
   let padTop = Math.round(srcH * topFrac);
