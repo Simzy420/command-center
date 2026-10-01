@@ -1,4 +1,5 @@
 import { uid } from '@/lib/ids';
+import { ensureWheelWarriorWidget } from '@/data/ensureWheelWarrior';
 import { DEFAULT_BOARDS, type LayoutDocument, type WidgetInstance } from '@/types/layout';
 
 export function createStarterLayout(): LayoutDocument {
@@ -135,10 +136,13 @@ export function createStarterLayout(): LayoutDocument {
     },
   ];
 
-  return {
-    version: 1,
-    boards: DEFAULT_BOARDS,
-    widgets,
-    updatedAt: Date.now(),
-  };
+  return ensureWheelWarriorWidget(
+    {
+      version: 1,
+      boards: DEFAULT_BOARDS,
+      widgets,
+      updatedAt: Date.now(),
+    },
+    () => uid('w'),
+  );
 }

@@ -42,6 +42,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,woff2}'],
         navigateFallback: `${pagesBase}index.html`,
+        navigateFallbackDenylist: [/\/games\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/image\.pollinations\.ai\/.*/i,

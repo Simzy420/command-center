@@ -6,6 +6,7 @@ import { LinksWidget } from '@/components/widgets/LinksWidget';
 import { ImageGenWidget } from '@/components/widgets/ImageGenWidget';
 import { WatchlistWidget } from '@/components/widgets/WatchlistWidget';
 import { RobinhoodWidget } from '@/components/widgets/RobinhoodWidget';
+import { GameWidget } from '@/components/widgets/GameWidget';
 import { GmailStubWidget, TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
 import type { FeatureFlags } from '@/store/sessionStore';
 
@@ -92,6 +93,16 @@ registerWidget({
   defaultSize: { w: 12, h: 10 },
   minSize: { w: 4, h: 6 },
   component: RobinhoodWidget,
+});
+
+registerWidget({
+  type: 'wheelwarrior',
+  title: 'Wheel Warrior',
+  description: 'Burning-highway runner. Swipe to dodge, hold GUN, tap ROCKET. Full-screen mode for phone.',
+  icon: 'game',
+  defaultSize: { w: 12, h: 14 },
+  minSize: { w: 4, h: 8 },
+  component: GameWidget,
 });
 
 registerWidget({
