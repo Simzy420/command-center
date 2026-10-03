@@ -95,6 +95,16 @@ export function createStarterLayout(): LayoutDocument {
     },
     {
       id: uid('w'),
+      type: 'compute',
+      x: 0,
+      y: 18,
+      w: 12,
+      h: 6,
+      page: 'trading',
+      settings: {},
+    },
+    {
+      id: uid('w'),
       type: 'chat',
       x: 0,
       y: 0,

@@ -6,6 +6,7 @@ import { LinksWidget } from '@/components/widgets/LinksWidget';
 import { ImageGenWidget } from '@/components/widgets/ImageGenWidget';
 import { WatchlistWidget } from '@/components/widgets/WatchlistWidget';
 import { RobinhoodWidget } from '@/components/widgets/RobinhoodWidget';
+import { ComputeWidget } from '@/components/widgets/ComputeWidget';
 import { GmailStubWidget, TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
 import type { FeatureFlags } from '@/store/sessionStore';
 
@@ -92,6 +93,16 @@ registerWidget({
   defaultSize: { w: 12, h: 10 },
   minSize: { w: 4, h: 6 },
   component: RobinhoodWidget,
+});
+
+registerWidget({
+  type: 'compute',
+  title: 'Compute Balance',
+  description: 'Live Virtuals compute remaining — agent LLM inference budget. Tap refresh to update.',
+  icon: 'trade',
+  defaultSize: { w: 6, h: 6 },
+  minSize: { w: 3, h: 4 },
+  component: ComputeWidget,
 });
 
 registerWidget({
