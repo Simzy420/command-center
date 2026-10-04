@@ -9,6 +9,7 @@ import { RobinhoodWidget } from '@/components/widgets/RobinhoodWidget';
 import { ComputeWidget } from '@/components/widgets/ComputeWidget';
 import { TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
 import { GmailWidget } from '@/components/widgets/GmailWidget';
+import { GameWidget, GAME_TITLE, GAME_TITLE_STYLE } from '@/components/widgets/GameWidget';
 import { DriveWidget } from '@/components/widgets/DriveWidget';
 import { GMAIL_TITLE_STYLE } from '@/adapters/gmail/policy';
 import { DRIVE_TITLE_STYLE } from '@/adapters/drive/policy';
@@ -107,6 +108,17 @@ registerWidget({
   defaultSize: { w: 6, h: 6 },
   minSize: { w: 3, h: 4 },
   component: ComputeWidget,
+});
+
+registerWidget({
+  type: 'game',
+  title: GAME_TITLE,
+  description: 'Opens the Claude artifact game in a new tab.',
+  icon: 'links',
+  defaultSize: { w: 6, h: 5 },
+  minSize: { w: 3, h: 3 },
+  titleStyle: GAME_TITLE_STYLE,
+  component: GameWidget,
 });
 
 registerWidget({
