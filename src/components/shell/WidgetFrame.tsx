@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { GripVertical, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useLayoutStore } from '@/store/layoutStore';
@@ -22,11 +22,13 @@ interface Props {
   widget: WidgetInstance;
   title: string;
   badge?: string;
+  /** When set, the title keeps this face instead of the display font. */
+  titleStyle?: CSSProperties;
   children: ReactNode;
   footer?: ReactNode;
 }
 
-export function WidgetFrame({ widget, title, badge = 'LIVE', children, footer }: Props) {
+export function WidgetFrame({ widget, title, badge = 'LIVE', titleStyle, children, footer }: Props) {
   const mode = useSessionStore((s) => s.mode);
   const setActiveWidget = useSessionStore((s) => s.setActiveWidget);
   const removeWidget = useLayoutStore((s) => s.removeWidget);
@@ -50,7 +52,14 @@ export function WidgetFrame({ widget, title, badge = 'LIVE', children, footer }:
         )}
       >
         {mode === 'edit' ? <GripVertical className="h-4 w-4 text-cyan-200/70" /> : null}
-        <h3 className="font-display text-[13px] font-bold uppercase tracking-[0.18em] text-white">
+        <h3
+          className={
+            titleStyle
+              ? 'text-[1.35rem] leading-none text-white'
+              : 'font-display text-[13px] font-bold uppercase tracking-[0.18em] text-white'
+          }
+          style={titleStyle}
+        >
           {title}
         </h3>
         <span className="ml-auto rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-200">

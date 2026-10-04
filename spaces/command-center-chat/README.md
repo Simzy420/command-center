@@ -40,6 +40,8 @@ This folder is a reference copy of the bridge app.
 
 Copy the Grok Bot webhook URL and sender key into the Space secrets. Do **not** paste them into Command Center.
 
+Do **not** put `GMAIL_APP_PASSWORD` on this Space and do **not** add `/api/gmail`. The Space is public. Gmail inbox and send live only on the private mail server in `server/gmail_mail.py`.
+
 ## API (live Space)
 
 - `GET /health` — `{ ok: true }`
