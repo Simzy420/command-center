@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import threading
@@ -152,6 +153,28 @@ class MailServerTest(unittest.TestCase):
         self.assertEqual(rejected, 400)
         self.assertIn("secret", error["error"].lower())
         self.assertNotIn(SENTINEL, json.dumps(error))
+
+    def test_closed_send_does_not_desync_the_connection(self) -> None:
+        os.environ.pop("GMAIL_APP_PASSWORD", None)
+        payload = json.dumps({"to": "a@b.co", "subject": "Hi", "body": "Yo"}).encode("utf-8")
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request(
+            "POST",
+            "/api/gmail/send",
+            body=payload,
+            headers={"Host": "127.0.0.1", "Content-Type": "application/json"},
+        )
+        first = conn.getresponse()
+        first_body = first.read()
+        self.assertEqual(first.status, 503)
+        self.assertIn(b"closed", first_body)
+        conn.request("GET", "/api/gmail/status", headers={"Host": "127.0.0.1"})
+        second = conn.getresponse()
+        second_body = second.read()
+        self.assertEqual(second.status, 503)
+        self.assertIn(b"GMAIL_APP_PASSWORD", second_body)
+        self.assertNotIn(b"Bad request", second_body)
+        conn.close()
 
     def test_public_origin_cannot_read_or_send(self) -> None:
         os.environ["GMAIL_APP_PASSWORD"] = SENTINEL

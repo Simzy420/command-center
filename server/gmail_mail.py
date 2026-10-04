@@ -463,14 +463,19 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _read_json(self) -> dict[str, Any]:
+    def _read_raw(self) -> bytes:
+        """Consume the body before any response so a closed send cannot desync the connection."""
         try:
             length = int(self.headers.get("Content-Length", "0") or "0")
         except ValueError as exc:
+            self.close_connection = True
             raise MailInputError("Send a JSON object with to, subject, and body.") from exc
         if length < 0 or length > 200_000:
+            self.close_connection = True
             raise MailInputError("Request is too large.")
-        raw = self.rfile.read(length) if length else b""
+        return self.rfile.read(length) if length else b""
+
+    def _parse_json(self, raw: bytes) -> dict[str, Any]:
         try:
             data = json.loads(raw.decode("utf-8")) if raw else {}
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -512,6 +517,11 @@ class Handler(BaseHTTPRequestHandler):
             self._json(502, {"ok": False, "error": str(exc)})
 
     def do_POST(self) -> None:  # noqa: N802
+        try:
+            raw = self._read_raw()
+        except MailInputError as exc:
+            self._json(400, {"ok": False, "error": str(exc)})
+            return
         if self._blocked():
             return
         path = self._path()
@@ -519,7 +529,7 @@ class Handler(BaseHTTPRequestHandler):
             if path != "/api/gmail/send":
                 self._json(404, {"ok": False, "error": "Not found."})
                 return
-            self._send()
+            self._send(raw)
         except MailInputError as exc:
             self._json(400, {"ok": False, "error": str(exc)})
         except MailError as exc:
@@ -568,11 +578,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._json(200, {"ok": True, "mailbox": MAILBOX, "message": message})
 
-    def _send(self) -> None:
+    def _send(self, raw: bytes) -> None:
         password = self._require_password()
         if password is None:
             return
-        data = self._read_json()
+        data = self._parse_json(raw)
         if limited("send", 10):
             self._json(429, {"ok": False, "error": "Too many sends. Wait a moment."})
             return
