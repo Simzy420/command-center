@@ -16,6 +16,7 @@ const ACCENT: Record<string, string> = {
   compute: 'accent-gold',
   gmail: 'accent-cyan',
   game: 'accent-mag',
+  drive: 'accent-cyan',
   trading: 'accent-gold',
 };
 

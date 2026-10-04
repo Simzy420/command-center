@@ -30,13 +30,11 @@ export default async function handler(req: any, res: any) {
       updated: new Date().toISOString(),
     });
   } catch {
-    // Fallback: return a static placeholder if acp is not available on Vercel
-    res.status(200).json({
-      limit: 0,
-      remaining: 0,
-      totalUsage: 0,
+    // ACP not available on Vercel — return 502 so the widget falls through
+    // to the static compute-balance.json file updated by the cron job.
+    res.status(502).json({
+      error: 'acp not available on this server',
       updated: new Date().toISOString(),
-      note: 'acp not available on this server. Use the static JSON file updated by the cron job.',
     });
   }
 }

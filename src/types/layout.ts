@@ -11,6 +11,7 @@ export type WidgetType =
   | 'robinhood'
   | 'gmail'
   | 'game'
+  | 'drive'
   | 'trading';
 
 export interface WidgetInstance {
