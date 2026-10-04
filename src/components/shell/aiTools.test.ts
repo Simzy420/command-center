@@ -17,10 +17,11 @@ test('AI Tools lists only the circled apps and opens each in a new tab', () => {
     'https://linear.app',
     'https://replit.com',
     'https://www.perplexity.ai',
+    'https://apps.apple.com/app/id1623228342',
   ]) {
     assert.equal(tools.includes(href), true, href);
   }
-  for (const name of ['ChatGPT', 'Base44', 'Cursor', 'Buffer', 'Linear', 'Replit', 'Perplexity']) {
+  for (const name of ['ChatGPT', 'Base44', 'Cursor', 'Buffer', 'Linear', 'Replit', 'Perplexity', 'Link']) {
     assert.match(tools, new RegExp(`name: '${name}'`));
   }
   assert.match(tools, /target="_blank"/);

@@ -287,7 +287,7 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 
 ## AI Tools
 
-The side menu is the drawer opened from the menu button at the top left, or from **System** on the dock. The first item is labeled **AI Tools**. Opening it lists ChatGPT, Base44, Cursor, Buffer, Linear, Replit, and Perplexity. Each row uses that tool’s name and opens its site in a new tab.
+The side menu is the drawer opened from the menu button at the top left, or from **System** on the dock. The first item is labeled **AI Tools**. Opening it lists ChatGPT, Base44, Cursor, Buffer, Linear, Replit, Perplexity, and Link. Each row uses that tool’s name and opens its site in a new tab. Link opens the App Store page.
 
 ## Shell map
 
