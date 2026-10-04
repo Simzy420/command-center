@@ -80,11 +80,13 @@ export default defineConfig({
     proxy: {
       // Dev only. The browser stays on this Vite origin; the mail process is loopback.
       '/api/gmail': { target: 'http://127.0.0.1:8787' },
+      '/api/drive': { target: 'http://127.0.0.1:8788' },
     },
   },
   preview: {
     proxy: {
       '/api/gmail': { target: 'http://127.0.0.1:8787' },
+      '/api/drive': { target: 'http://127.0.0.1:8788' },
     },
   },
 });

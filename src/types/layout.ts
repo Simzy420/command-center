@@ -10,6 +10,7 @@ export type WidgetType =
   | 'watchlist'
   | 'robinhood'
   | 'gmail'
+  | 'drive'
   | 'trading';
 
 export interface WidgetInstance {

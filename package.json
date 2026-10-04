@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build && node scripts/prepare-vercel-output.mjs",
     "vercel-build": "esbuild src/adapters/imagegen/openaiApi.ts --platform=node --format=esm --outfile=src/adapters/imagegen/openaiApi.js",
     "preview": "vite preview",
-    "mail-server": "python3 server/gmail_mail.py"
+    "mail-server": "python3 server/gmail_mail.py",
+    "drive-server": "python3 server/drive_api.py"
   },
   "dependencies": {
     "lucide-react": "^0.487.0",
