@@ -14,6 +14,7 @@ import drive_api as drive
 
 
 SENTINEL = "unit-test-drive-secret-value"
+PASSWORD = "unit-test-drive-password"
 FILE_ID = "abcdefghij"
 
 
@@ -76,10 +77,13 @@ class DriveServerTest(unittest.TestCase):
             "GOOGLE_DRIVE_CLIENT_ID",
             "GOOGLE_DRIVE_CLIENT_SECRET",
             "GOOGLE_DRIVE_REFRESH_TOKEN",
+            "COMMAND_CENTER_PASSWORD",
             "DRIVE_PRIVATE_HOST",
         )}
         set_secrets(None)
+        os.environ.pop("COMMAND_CENTER_PASSWORD", None)
         os.environ.pop("DRIVE_PRIVATE_HOST", None)
+        self.cookie = ""
         drive.reset_limits()
         self.spy = GatewaySpy()
         self._old_gateway = drive.GATEWAY
@@ -111,6 +115,8 @@ class DriveServerTest(unittest.TestCase):
         headers = {"Host": host, "Accept": "application/json"}
         if origin:
             headers["Origin"] = origin
+        if self.cookie:
+            headers["Cookie"] = self.cookie
         if data is not None:
             headers["Content-Type"] = "application/json"
         req = urllib.request.Request(
@@ -125,17 +131,33 @@ class DriveServerTest(unittest.TestCase):
         except urllib.error.HTTPError as exc:
             return exc.code, json.loads(exc.read().decode("utf-8"))
 
+    def unlock(self) -> None:
+        os.environ["COMMAND_CENTER_PASSWORD"] = PASSWORD
+        data = json.dumps({"password": PASSWORD}).encode("utf-8")
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}/api/drive/session",
+            data=data,
+            headers={"Host": "127.0.0.1", "Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            cookie = response.headers.get("Set-Cookie") or ""
+            body = json.loads(response.read().decode("utf-8"))
+        self.assertTrue(body["ok"])
+        self.assertNotIn(PASSWORD, json.dumps(body))
+        self.cookie = cookie.split(";", 1)[0]
+
     def test_closed_without_secret_does_not_call_drive(self) -> None:
         status, body = self.request("/api/drive/files")
         self.assertEqual(status, 503)
-        self.assertTrue(body["closed"])
-        self.assertIn("GOOGLE_DRIVE_CLIENT_ID", body["error"])
-        self.assertIn("https://www.googleapis.com/auth/drive", body["error"])
-        self.assertEqual(body["account"], drive.ACCOUNT)
+        self.assertTrue(body["needsPassword"])
+        self.assertIn("COMMAND_CENTER_PASSWORD", body["error"])
+        self.assertNotIn("files", body)
         self.assertEqual(self.spy.listed, 0)
         write_status, write_body = self.request("/api/drive/files", "POST", {"name": "a.txt", "content": "hi"})
         self.assertEqual(write_status, 503)
-        self.assertTrue(write_body["closed"])
+        self.assertTrue(write_body["needsPassword"])
+        self.assertNotIn("files", write_body)
         self.assertEqual(self.spy.created, [])
 
     def test_closed_post_does_not_desync_the_connection(self) -> None:
@@ -150,17 +172,34 @@ class DriveServerTest(unittest.TestCase):
         first = conn.getresponse()
         first_body = first.read()
         self.assertEqual(first.status, 503)
-        self.assertIn(b"closed", first_body)
+        self.assertIn(b"needsPassword", first_body)
+        self.assertNotIn(b"files", first_body)
         conn.request("GET", "/api/drive/status", headers={"Host": "127.0.0.1"})
         second = conn.getresponse()
         second_body = second.read()
         self.assertEqual(second.status, 503)
-        self.assertIn(b"GOOGLE_DRIVE_REFRESH_TOKEN", second_body)
+        self.assertIn(b"COMMAND_CENTER_PASSWORD", second_body)
         self.assertNotIn(b"Bad request", second_body)
         conn.close()
 
+    def test_wrong_password_returns_no_files(self) -> None:
+        os.environ["COMMAND_CENTER_PASSWORD"] = PASSWORD
+        set_secrets(SENTINEL)
+        status, body = self.request("/api/drive/files")
+        self.assertEqual(status, 401)
+        self.assertTrue(body["needsPassword"])
+        self.assertNotIn("files", body)
+        self.assertEqual(self.spy.listed, 0)
+        wrong, error = self.request("/api/drive/session", "POST", {"password": "nope"})
+        self.assertEqual(wrong, 401)
+        self.assertEqual(error["error"], "Wrong password.")
+        self.assertNotIn("files", error)
+        self.assertNotIn(PASSWORD, json.dumps(error))
+        self.assertNotIn(SENTINEL, json.dumps(error))
+
     def test_list_is_capped_and_open_shows_contents(self) -> None:
         set_secrets(SENTINEL)
+        self.unlock()
         status, body = self.request("/api/drive/files")
         self.assertEqual(status, 200)
         self.assertEqual(body["account"], drive.ACCOUNT)
@@ -175,6 +214,7 @@ class DriveServerTest(unittest.TestCase):
 
     def test_create_and_update_and_reject_a_browser_secret(self) -> None:
         set_secrets(SENTINEL)
+        self.unlock()
         status, body = self.request("/api/drive/files", "POST", {"name": "notes.txt", "content": "hello"})
         self.assertEqual(status, 200, body)
         self.assertEqual(body["account"], drive.ACCOUNT)
@@ -194,6 +234,7 @@ class DriveServerTest(unittest.TestCase):
 
     def test_secret_in_an_error_is_scrubbed(self) -> None:
         set_secrets(SENTINEL)
+        self.unlock()
         self.spy.fail_with = f"token {SENTINEL} leaked"
         status, body = self.request("/api/drive/files")
         self.assertEqual(status, 502)
@@ -224,16 +265,27 @@ class DriveServerTest(unittest.TestCase):
 
     def test_bad_file_id_is_rejected(self) -> None:
         set_secrets(SENTINEL)
+        self.unlock()
         status, body = self.request("/api/drive/files/short")
         self.assertEqual(status, 404)
         self.assertEqual(self.spy.reads, [])
         self.assertNotIn("content", body)
 
+    def test_unlocked_without_google_secret_lists_nothing(self) -> None:
+        self.unlock()
+        set_secrets(None)
+        status, body = self.request("/api/drive/files")
+        self.assertEqual(status, 503)
+        self.assertIn("GOOGLE_DRIVE_CLIENT_ID", body["error"])
+        self.assertNotIn("files", body)
+        self.assertEqual(self.spy.listed, 0)
+
     def test_response_has_no_cors_header(self) -> None:
         set_secrets(SENTINEL)
+        self.unlock()
         req = urllib.request.Request(
             f"http://127.0.0.1:{self.port}/api/drive/status",
-            headers={"Host": "127.0.0.1"},
+            headers={"Host": "127.0.0.1", "Cookie": self.cookie},
         )
         with urllib.request.urlopen(req, timeout=5) as response:
             self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))

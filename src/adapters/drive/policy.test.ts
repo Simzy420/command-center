@@ -13,19 +13,19 @@ import {
   normalizeDriveFile,
 } from './policy.ts';
 
-test('Drive calls are refused on the public site and the chat Space', () => {
+test('Drive calls are refused on static hosts and allowed on the Vercel phone site', () => {
   for (const host of [
     'simzy420.github.io',
     'github.io',
     'simzy-command-center-chat.hf.space',
     'huggingface.co',
-    'command-center.vercel.app',
     'preview.netlify.app',
     'command.pages.dev',
     '',
   ]) {
     assert.equal(driveRequestsAllowed(host), false, host);
   }
+  assert.equal(driveRequestsAllowed('command-center.vercel.app'), true);
   assert.equal(driveRequestsAllowed('localhost'), true);
   assert.equal(driveRequestsAllowed('127.0.0.1'), true);
   assert.equal(driveRequestsAllowed('192.168.1.20:5173'), true);
@@ -37,8 +37,8 @@ test('the Google Drive label keeps its words and the account is locked', () => {
   assert.match(DRIVE_TITLE_STYLE.fontFamily, /Orbitron/);
   assert.equal(DRIVE_ACCOUNT, 'caseylsims@gmail.com');
   assert.match(DRIVE_SCOPE, /auth\/drive$/);
-  assert.match(PUBLIC_CLOSED_MESSAGE, /GOOGLE_DRIVE_CLIENT_SECRET/);
-  assert.match(PUBLIC_CLOSED_MESSAGE, /127\.0\.0\.1:8788/);
+  assert.match(PUBLIC_CLOSED_MESSAGE, /GitHub Pages/);
+  assert.match(PUBLIC_CLOSED_MESSAGE, /Vercel site/);
 });
 
 test('file rows are capped at 25 and ignore bad ids', () => {
@@ -71,7 +71,9 @@ test('the phone sources never read a Google Drive secret', () => {
     const text = readFileSync(file, 'utf8');
     assert.equal(/import\.meta\.env\.(VITE_)?GOOGLE/i.test(text), false, file);
     assert.equal(/process\.env\.GOOGLE_DRIVE/.test(text), false, file);
+    assert.equal(/process\.env\.COMMAND_CENTER_PASSWORD/.test(text), false, file);
     assert.equal(/VITE_GOOGLE/.test(text), false, file);
+    assert.equal(/VITE_COMMAND_CENTER/.test(text), false, file);
   }
 });
 
@@ -85,6 +87,12 @@ test('Google Drive is a normal widget and Files still saves on this device', () 
   assert.match(widget, /title="Google Drive"/);
   assert.match(widget, /handOffFile/);
   assert.match(widget, /driveRequestsAllowed/);
+  assert.match(widget, /type="password"/);
+  const app = readFileSync('src/App.tsx', 'utf8');
+  assert.equal(app.includes('type="password"'), false);
+  const handle = readFileSync('api/_lib/password.ts', 'utf8');
+  assert.match(handle, /COMMAND_CENTER_PASSWORD/);
+  assert.equal(/COMMAND_CENTER_PASSWORD\s*=\s*['"]/.test(handle), false);
   const client = readFileSync('src/adapters/drive/client.ts', 'utf8');
   assert.match(client, /assertPrivateDriveHost/);
   assert.match(client, /\/api\/drive\/files/);
@@ -94,6 +102,5 @@ test('Google Drive is a normal widget and Files still saves on this device', () 
   const space = readFileSync('spaces/command-center-chat/main.py', 'utf8');
   assert.equal(space.includes('/api/drive'), false);
   assert.equal(space.includes('GOOGLE_DRIVE_CLIENT_SECRET'), false);
-  const apiNames = readdirSync('api');
-  assert.equal(apiNames.some((name) => name.toLowerCase().includes('drive')), false);
+  assert.equal(space.includes('COMMAND_CENTER_PASSWORD'), false);
 });

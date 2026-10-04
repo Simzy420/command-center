@@ -42,7 +42,7 @@ Copy the Grok Bot webhook URL and sender key into the Space secrets. Do **not** 
 
 Do **not** put `GMAIL_APP_PASSWORD` on this Space and do **not** add `/api/gmail`. The Space is public. Gmail inbox and send live only on the private mail server in `server/gmail_mail.py`.
 
-Do **not** put `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, or `GOOGLE_DRIVE_REFRESH_TOKEN` on this Space, and do **not** add `/api/drive`. Drive files stay on the private bridge in `server/drive_api.py`.
+Do **not** put `COMMAND_CENTER_PASSWORD`, `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, or `GOOGLE_DRIVE_REFRESH_TOKEN` on this Space, and do **not** add `/api/drive`. Drive stays on the Vercel server routes.
 
 ## API (live Space)
 

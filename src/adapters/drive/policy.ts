@@ -1,4 +1,15 @@
-import { isPublicMailHost, normalizeHost } from '../gmail/policy.ts';
+import { normalizeHost } from '../gmail/policy.ts';
+
+/** Hosts with no Drive server. The Vercel site is allowed and checks the password there. */
+const STATIC_HOST_SUFFIXES = [
+  'github.io',
+  'githubusercontent.com',
+  'github.com',
+  'hf.space',
+  'huggingface.co',
+  'netlify.app',
+  'pages.dev',
+];
 
 /** Locked Drive account. The phone never chooses another Google account. */
 export const DRIVE_ACCOUNT = 'caseylsims@gmail.com';
@@ -17,10 +28,10 @@ export const DRIVE_TITLE_STYLE = {
 };
 
 export const PUBLIC_CLOSED_MESSAGE =
-  'Google Drive is closed on this public site. Files are not loaded, and save and send are disabled, so a stranger cannot read this Drive. On a private machine set GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, and GOOGLE_DRIVE_REFRESH_TOKEN for caseylsims@gmail.com. Enable the Google Drive API and consent with scope https://www.googleapis.com/auth/drive, then run server/drive_api.py on 127.0.0.1:8788. Those secrets stay out of VITE_ variables, GitHub Pages, Vercel, and the public chat Space.';
+  'Google Drive does not load on this host. Open the Vercel site and unlock the Google Drive section there. GitHub Pages and the chat Space do not list, save, or send Drive files.';
 
 export const UNREACHABLE_MESSAGE =
-  'The private Drive server is not running on this host. Start server/drive_api.py with GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, and GOOGLE_DRIVE_REFRESH_TOKEN set. It listens on 127.0.0.1:8788. Those secrets stay off GitHub Pages, off VITE_ variables, and off the public chat Space.';
+  'Google Drive did not answer on this host. On the Vercel project, set COMMAND_CENTER_PASSWORD, GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, and GOOGLE_DRIVE_REFRESH_TOKEN. Those values stay on the server.';
 
 const FILE_ID = /^[A-Za-z0-9_-]{8,200}$/;
 
@@ -39,7 +50,7 @@ export interface DriveFile extends DriveFileSummary {
 export function driveRequestsAllowed(hostname: string): boolean {
   const host = normalizeHost(hostname);
   if (!host) return false;
-  return !isPublicMailHost(host);
+  return !STATIC_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
 }
 
 export function isDriveFileId(value: string): boolean {

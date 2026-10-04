@@ -13,6 +13,41 @@ const pagesBase = process.env.VERCEL ? '/' : '/command-center/';
 export default defineConfig({
   base: pagesBase,
   plugins: [
+    {
+      name: 'drive-api',
+      async configureServer(server) {
+        const { handleDriveRequest } = await import('./api/_lib/handle.ts');
+        server.middlewares.use((req, res, next) => {
+          if (!req.url?.startsWith('/api/drive')) {
+            next();
+            return;
+          }
+          handleDriveRequest(req, res).catch(() => {
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'Drive request failed.' }));
+            }
+          });
+        });
+      },
+      async configurePreviewServer(server) {
+        const { handleDriveRequest } = await import('./api/_lib/handle.ts');
+        server.middlewares.use((req, res, next) => {
+          if (!req.url?.startsWith('/api/drive')) {
+            next();
+            return;
+          }
+          handleDriveRequest(req, res).catch(() => {
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'Drive request failed.' }));
+            }
+          });
+        });
+      },
+    },
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -42,6 +77,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,woff2}'],
         navigateFallback: `${pagesBase}index.html`,
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/image\.pollinations\.ai\/.*/i,
@@ -80,13 +116,11 @@ export default defineConfig({
     proxy: {
       // Dev only. The browser stays on this Vite origin; the mail process is loopback.
       '/api/gmail': { target: 'http://127.0.0.1:8787' },
-      '/api/drive': { target: 'http://127.0.0.1:8788' },
     },
   },
   preview: {
     proxy: {
       '/api/gmail': { target: 'http://127.0.0.1:8787' },
-      '/api/drive': { target: 'http://127.0.0.1:8788' },
     },
   },
 });

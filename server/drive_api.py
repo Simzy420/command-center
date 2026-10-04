@@ -10,6 +10,8 @@ This is not the on-device Files widget, and it is not the public chat Space.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import ipaddress
 import json
 import os
@@ -74,7 +76,17 @@ FORBIDDEN_FIELDS = {
 }
 
 Transport = Callable[[str, str, dict[str, str], bytes | None], tuple[int, bytes]]
-_HITS: dict[str, list[float]] = {"list": [], "read": [], "write": []}
+_HITS: dict[str, list[float]] = {"list": [], "read": [], "write": [], "auth": []}
+COOKIE_NAME = "cc_drive_session"
+COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+PASSWORD_UNSET_MESSAGE = (
+    "Set COMMAND_CENTER_PASSWORD on the server. The Google Drive section stays empty until "
+    "that variable is set. Do not put it in a VITE_ variable or in the app."
+)
+GOOGLE_UNSET_MESSAGE = (
+    "Set GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, and GOOGLE_DRIVE_REFRESH_TOKEN "
+    "on the server. The password was accepted. Drive files stay empty until those variables are set."
+)
 
 
 class DriveError(Exception):
@@ -104,11 +116,51 @@ def current_secrets() -> dict[str, str] | None:
 
 def secret_values() -> list[str]:
     values = [
+        env_value("COMMAND_CENTER_PASSWORD"),
         env_value("GOOGLE_DRIVE_CLIENT_ID"),
         env_value("GOOGLE_DRIVE_CLIENT_SECRET"),
         env_value("GOOGLE_DRIVE_REFRESH_TOKEN"),
     ]
     return [value for value in values if len(value) >= 8]
+
+
+def password_configured() -> bool:
+    return bool(env_value("COMMAND_CENTER_PASSWORD"))
+
+
+def passwords_match(given: object) -> bool:
+    expected = env_value("COMMAND_CENTER_PASSWORD")
+    if not expected or not isinstance(given, str) or not given:
+        return False
+    return hmac.compare_digest(
+        hashlib.sha256(given.encode("utf-8")).digest(),
+        hashlib.sha256(expected.encode("utf-8")).digest(),
+    )
+
+
+def issue_token() -> str:
+    exp = str(int(time.time()) + COOKIE_MAX_AGE)
+    sig = hmac.new(env_value("COMMAND_CENTER_PASSWORD").encode("utf-8"), exp.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{exp}.{sig}"
+
+
+def token_ok(token: str) -> bool:
+    secret = env_value("COMMAND_CENTER_PASSWORD")
+    if not secret or not token or "." not in token:
+        return False
+    exp, sig = token.split(".", 1)
+    if not exp.isdigit() or int(exp) < int(time.time()):
+        return False
+    expected = hmac.new(secret.encode("utf-8"), exp.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+
+def read_cookie(header: str) -> str:
+    for part in (header or "").split(";"):
+        name, _, value = part.strip().partition("=")
+        if name == COOKIE_NAME:
+            return value
+    return ""
 
 
 def scrub_text(text: str, extra: list[str] | None = None) -> str:
@@ -499,15 +551,45 @@ class Handler(BaseHTTPRequestHandler):
                 return True
         return False
 
-    def _json(self, code: int, payload: dict[str, Any]) -> None:
+    def _json(self, code: int, payload: dict[str, Any], cookie: str | None = None) -> None:
         body = scrub_text(json.dumps(payload)).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        if cookie:
+            self.send_header("Set-Cookie", cookie)
         self.end_headers()
         self.wfile.write(body)
+
+    def _needs_password(self, error: str, code: int = 401) -> None:
+        self._json(code, {"ok": False, "needsPassword": True, "error": error})
+
+    def _session_ok(self) -> bool:
+        return token_ok(read_cookie(self.headers.get("Cookie", "")))
+
+    def _require_session(self) -> bool:
+        if not password_configured():
+            self._needs_password(PASSWORD_UNSET_MESSAGE, 503)
+            return False
+        if not self._session_ok():
+            self._needs_password("Enter the Command Center password.")
+            return False
+        return True
+
+    def _session_cookie(self, token: str) -> str:
+        host = normalize_host(self.headers.get("Host", ""))
+        parts = [
+            f"{COOKIE_NAME}={token}",
+            "HttpOnly",
+            "Path=/api/drive",
+            "SameSite=Lax",
+            f"Max-Age={COOKIE_MAX_AGE}",
+        ]
+        if host not in {"localhost", "127.0.0.1", "::1"}:
+            parts.append("Secure")
+        return "; ".join(parts)
 
     def _read_raw(self) -> bytes:
         try:
@@ -520,7 +602,7 @@ class Handler(BaseHTTPRequestHandler):
             raise DriveInputError("Request is too large.")
         return self.rfile.read(length) if length else b""
 
-    def _parse_json(self, raw: bytes) -> dict[str, Any]:
+    def _parse_json(self, raw: bytes, allow_password: bool = False) -> dict[str, Any]:
         try:
             data = json.loads(raw.decode("utf-8")) if raw else {}
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -528,7 +610,10 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(data, dict):
             raise DriveInputError("Send a JSON object.")
         for key in data:
-            if str(key).lower().replace("-", "_") in FORBIDDEN_FIELDS:
+            normalized = str(key).lower().replace("-", "_")
+            if allow_password and normalized == "password":
+                continue
+            if normalized in FORBIDDEN_FIELDS:
                 raise DriveInputError("Do not send Google secrets from the browser.")
         return data
 
@@ -537,7 +622,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _require_secrets(self) -> bool:
         if current_secrets() is None:
-            self._json(503, closed_payload())
+            self._json(503, {"ok": False, "error": GOOGLE_UNSET_MESSAGE})
             return False
         return True
 
@@ -549,6 +634,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = self._path()
         try:
+            if path == "/api/drive/session":
+                self._session_status()
+                return
             if path == "/api/drive/status":
                 self._status()
                 return
@@ -566,12 +654,6 @@ class Handler(BaseHTTPRequestHandler):
             self._json(502, {"ok": False, "error": scrub_text(str(exc))})
 
     def do_POST(self) -> None:  # noqa: N802
-        self._write("create")
-
-    def do_PUT(self) -> None:  # noqa: N802
-        self._write("update")
-
-    def _write(self, mode: str) -> None:
         try:
             raw = self._read_raw()
         except DriveInputError as exc:
@@ -579,8 +661,48 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self._blocked():
             return
+        if self._path() == "/api/drive/session":
+            self._unlock(raw)
+            return
+        self._write("create", raw)
+
+    def do_PUT(self) -> None:  # noqa: N802
+        try:
+            raw = self._read_raw()
+        except DriveInputError as exc:
+            self._json(400, {"ok": False, "error": str(exc)})
+            return
+        if self._blocked():
+            return
+        self._write("update", raw)
+
+    def _unlock(self, raw: bytes) -> None:
+        try:
+            data = self._parse_json(raw, allow_password=True)
+        except DriveInputError as exc:
+            self._json(400, {"ok": False, "error": str(exc)})
+            return
+        if not password_configured():
+            self._needs_password(PASSWORD_UNSET_MESSAGE, 503)
+            return
+        if limited("auth", 8):
+            self._needs_password("Too many password attempts. Wait a moment.", 429)
+            return
+        if not passwords_match(data.get("password")):
+            self._needs_password("Wrong password.")
+            return
+        self._json(200, {"ok": True}, self._session_cookie(issue_token()))
+
+    def _session_status(self) -> None:
+        if not self._require_session():
+            return
+        self._json(200, {"ok": True})
+
+    def _write(self, mode: str, raw: bytes) -> None:
         path = self._path()
         try:
+            if not self._require_session():
+                return
             if not self._require_secrets():
                 return
             data = self._parse_json(raw)
@@ -606,12 +728,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json(502, {"ok": False, "error": scrub_text(str(exc))})
 
     def _status(self) -> None:
+        if not self._require_session():
+            return
         if current_secrets() is None:
-            self._json(503, closed_payload())
+            self._json(503, {"ok": False, "error": GOOGLE_UNSET_MESSAGE})
             return
         self._json(200, {"ok": True, "closed": False, "account": ACCOUNT, "limit": LIST_LIMIT})
 
     def _list(self) -> None:
+        if not self._require_session():
+            return
         if not self._require_secrets():
             return
         if limited("list", 30):
@@ -621,6 +747,8 @@ class Handler(BaseHTTPRequestHandler):
         self._json(200, {"ok": True, "account": ACCOUNT, "limit": LIST_LIMIT, "files": files})
 
     def _read(self, file_id: str) -> None:
+        if not self._require_session():
+            return
         if not self._require_secrets():
             return
         if limited("read", 60):

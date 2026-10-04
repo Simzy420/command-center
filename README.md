@@ -23,7 +23,7 @@ Live (GitHub Pages): https://simzy420.github.io/command-center/
 - Avatars use the three ref styles: cyan ringed sphere, purple energy pyramid, fragmented lightning cube.
 - 2-column grid on phone, 12-column on desktop.
 - Long-press / drag from the **widget header in Edit mode**. Use mode does not capture drag, so the page scrolls normally.
-- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. The Robinhood widget shows the latest portfolio snapshot pushed to the chat Space — account total and equity positions, with quotes only when that snapshot includes them. Gmail lists the newest 25 messages from the private mail server, or stays closed until that server has `GMAIL_APP_PASSWORD`. Google Drive lists the newest 25 files from the private Drive server, or stays closed until that server has the OAuth refresh token. The Trading stub still shows **Connect data source**.
+- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. The Robinhood widget shows the latest portfolio snapshot pushed to the chat Space — account total and equity positions, with quotes only when that snapshot includes them. Gmail lists the newest 25 messages from the private mail server, or stays closed until that server has `GMAIL_APP_PASSWORD`. Google Drive lists the newest 25 files after the Drive section password checks out on the server. The rest of the app stays open. The Trading stub still shows **Connect data source**.
 - No App Store binary, no unrestricted iframes, no live wallet signing, no fake live trading, no real payment backend.
 - Owner plan persists to `localStorage`. Guest/unpaid sees **Preview mode — upgrade to save** (billing is a stub in System).
 
@@ -283,19 +283,20 @@ Open Command Center at `http://127.0.0.1:5173/command-center/` (or another priva
 
 The **Google Drive** section is a separate board widget from Files. Open it from the **+** add-widget menu. The title stays “Google Drive”. It is locked to `caseylsims@gmail.com`. It lists the newest 25 files (folders and trash omitted), opens one to show its text, **Save** creates a text file or updates a text file already in Drive, and **Send** hands the open text to this phone’s share sheet (Messages, Mail, AirDrop) or downloads it when the browser has no share sheet. The on-device Files widget is unchanged.
 
-The phone never holds a Google secret. It calls same-origin `/api/drive/*` only when the page is not a public host (GitHub Pages, the Hugging Face Space, Vercel, Netlify, Cloudflare Pages). On those hosts the widget stays closed and does not list, open, save, or send Drive files.
+The rest of Command Center stays open. Only the Google Drive section asks for a password. Wrong or missing password gets no file list, no save, and no send. The phone never holds the password or a Google secret. It calls same-origin `/api/drive/*` on the Vercel site. The server checks `COMMAND_CENTER_PASSWORD` and only then talks to Google. GitHub Pages and the chat Space have no Drive server, so those hosts still show nothing from Drive.
 
-Drive itself is `server/drive_api.py`. It talks to the **Google Drive API v3** (`https://www.googleapis.com/drive/v3`) with OAuth scope `https://www.googleapis.com/auth/drive`. The narrower `drive.file` scope cannot see files this app did not create, so the bridge uses the full Drive scope. The process reads three environment variables and nothing else:
+Drive on the Vercel site is the serverless route under `api/drive/`. It talks to the **Google Drive API v3** (`https://www.googleapis.com/drive/v3`) with OAuth scope `https://www.googleapis.com/auth/drive`. The narrower `drive.file` scope cannot see files this app did not create, so the route uses the full Drive scope. `npm run dev` serves the same route. `server/drive_api.py` is the optional loopback bridge and uses the same password check.
 
 | Secret | Where it lives |
 | --- | --- |
-| `GOOGLE_DRIVE_CLIENT_ID` | Environment of `server/drive_api.py` only |
-| `GOOGLE_DRIVE_CLIENT_SECRET` | Environment of `server/drive_api.py` only |
-| `GOOGLE_DRIVE_REFRESH_TOKEN` | Environment of `server/drive_api.py` only |
+| `COMMAND_CENTER_PASSWORD` | Vercel project environment (server only). Also the environment of `npm run dev` or `server/drive_api.py` when you run them yourself. |
+| `GOOGLE_DRIVE_CLIENT_ID` | Same server environment |
+| `GOOGLE_DRIVE_CLIENT_SECRET` | Same server environment |
+| `GOOGLE_DRIVE_REFRESH_TOKEN` | Same server environment |
 
-There is no service-account key in this repo. Do not put any of those values in a `VITE_` variable, GitHub Pages, Vercel, the chat Space, or git.
+There is no service-account key in this repo. Do not put any of those values in a `VITE_` variable, GitHub Pages, the chat Space, or git.
 
-Until all three are set, list, open, and save return closed and do not call Google. The process binds to `127.0.0.1:8788` (override with a private `DRIVE_LISTEN_HOST` only). It does not send CORS headers, and it rejects requests whose Host, Origin, or Referer is a public site. Google Docs, Sheets, and Slides open as exported text. Save writes a new `.txt` file for those, because the bridge does not overwrite Google’s own file types. Text files update in place.
+Until `COMMAND_CENTER_PASSWORD` is set, the Drive section accepts no password and returns no files. After the right password, list, open, and save still return no files until the three Google variables are set, and they do not call Google before that. The route sends no CORS headers. Google Docs, Sheets, and Slides open as exported text. Save writes a new `.txt` file for those, because the bridge does not overwrite Google’s own file types. Text files update in place.
 
 One-time consent, on the private machine:
 
@@ -315,14 +316,24 @@ GOOGLE_DRIVE_CLIENT_ID='...' GOOGLE_DRIVE_CLIENT_SECRET='...' python3 server/dri
 GOOGLE_DRIVE_CLIENT_ID='...' GOOGLE_DRIVE_CLIENT_SECRET='...' python3 server/drive_auth.py --code 'CODE'
 ```
 
-7. Start the bridge with all three variables, then the app:
+7. On the **Vercel project** for the phone site, set these environment variables for Production (and Preview if you use preview URLs). Do not prefix them with `VITE_`.
 
-```bash
-GOOGLE_DRIVE_CLIENT_ID='...' GOOGLE_DRIVE_CLIENT_SECRET='...' GOOGLE_DRIVE_REFRESH_TOKEN='...' npm run drive-server
-npm run dev   # Vite proxies /api/drive to 127.0.0.1:8788
+```text
+COMMAND_CENTER_PASSWORD
+GOOGLE_DRIVE_CLIENT_ID
+GOOGLE_DRIVE_CLIENT_SECRET
+GOOGLE_DRIVE_REFRESH_TOKEN
 ```
 
-Open Command Center at `http://127.0.0.1:5173/command-center/` on that machine. GitHub Pages keeps the closed state. A phone on the public site will not load Drive files. To use Drive from the phone, open Command Center from a private host that reverse-proxies `/api/drive` to this process (a LAN address or a private tunnel). That hostname must match `DRIVE_PRIVATE_HOST` when it is not loopback or a private IP. Do not publish port 8788.
+Redeploy after saving them. That is the deploy step. The phone opens the Vercel site, adds **Google Drive**, and enters `COMMAND_CENTER_PASSWORD`. Files, chat, and the other sections stay usable with no password.
+
+Local check, with the same variables in the shell and not in a file that gets committed:
+
+```bash
+npm run dev
+```
+
+`npm run drive-server` remains the optional loopback bridge on `127.0.0.1:8788`. It also requires `COMMAND_CENTER_PASSWORD` before it lists or writes. Do not publish port 8788. GitHub Pages still has no Drive API.
 
 ## Files
 

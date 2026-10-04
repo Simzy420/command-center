@@ -28,6 +28,15 @@ export class DriveUnreachableError extends Error {
   }
 }
 
+export class DriveNeedsPasswordError extends Error {
+  readonly needsPassword = true;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'DriveNeedsPasswordError';
+  }
+}
+
 export function assertPrivateDriveHost(hostname: string): void {
   if (!driveRequestsAllowed(hostname)) {
     throw new DriveClosedError(PUBLIC_CLOSED_MESSAGE);
@@ -42,13 +51,19 @@ async function requestJson(
   assertPrivateDriveHost(hostname);
   let response: Response;
   try {
-    response = await fetch(path, { ...init, cache: 'no-store' });
+    response = await fetch(path, { ...init, credentials: 'same-origin', cache: 'no-store' });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new DriveUnreachableError();
   }
   const data: unknown = await response.json().catch(() => ({}));
   const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (response.status === 401 || record.needsPassword === true) {
+    const message = typeof record.error === 'string' && record.error.trim()
+      ? record.error
+      : 'Enter the Command Center password.';
+    throw new DriveNeedsPasswordError(message);
+  }
   if (record.closed === true) {
     const message = typeof record.error === 'string' && record.error.trim() ? record.error : PUBLIC_CLOSED_MESSAGE;
     throw new DriveClosedError(message);
@@ -63,6 +78,18 @@ async function requestJson(
     throw new Error('This board only opens caseylsims@gmail.com.');
   }
   return record;
+}
+
+export async function loadDriveSession(hostname: string, signal?: AbortSignal): Promise<void> {
+  await requestJson(hostname, '/api/drive/session', { signal, headers: { Accept: 'application/json' } });
+}
+
+export async function unlockDrive(hostname: string, password: string): Promise<void> {
+  await requestJson(hostname, '/api/drive/session', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
 }
 
 export async function loadDriveFiles(

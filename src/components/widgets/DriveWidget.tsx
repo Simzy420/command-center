@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
   createDriveFile,
   DriveClosedError,
+  DriveNeedsPasswordError,
   DriveUnreachableError,
   loadDriveFile,
   loadDriveFiles,
+  loadDriveSession,
+  unlockDrive,
   updateDriveFile,
 } from '@/adapters/drive/client';
 import {
@@ -59,6 +62,10 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
       ? PUBLIC_CLOSED_MESSAGE
       : null,
   );
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
   const [files, setFiles] = useState<DriveFileSummary[]>([]);
   const [listError, setListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -83,15 +90,25 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
     const controller = new AbortController();
     setLoading(true);
     setListError(null);
-    loadDriveFiles(hostname, controller.signal)
+    loadDriveSession(hostname, controller.signal)
+      .then(() => loadDriveFiles(hostname, controller.signal))
       .then((result) => {
         if (controller.signal.aborted) return;
+        setNeedsPassword(false);
+        setAuthError(null);
         setClosedMessage(null);
         setFiles(result.files);
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         setFiles([]);
+        if (err instanceof DriveNeedsPasswordError) {
+          setNeedsPassword(true);
+          setClosedMessage(null);
+          setAuthError(err.message);
+          return;
+        }
+        setNeedsPassword(false);
         if (err instanceof DriveClosedError) {
           setClosedMessage(err.message);
           return;
@@ -111,7 +128,44 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
 
   function blockedReason(): string | null {
     if (!driveRequestsAllowed(window.location.hostname)) return PUBLIC_CLOSED_MESSAGE;
+    if (needsPassword) return authError || 'Enter the Command Center password.';
     return closedMessage;
+  }
+
+  async function onUnlock(event: FormEvent) {
+    event.preventDefault();
+    const typed = password;
+    setPassword('');
+    if (!driveRequestsAllowed(window.location.hostname)) {
+      setClosedMessage(PUBLIC_CLOSED_MESSAGE);
+      setFiles([]);
+      return;
+    }
+    if (!typed) {
+      setNeedsPassword(true);
+      setAuthError('Enter the Command Center password.');
+      setFiles([]);
+      return;
+    }
+    setUnlocking(true);
+    setAuthError(null);
+    try {
+      await unlockDrive(window.location.hostname, typed);
+      setNeedsPassword(false);
+      setReloadKey((key) => key + 1);
+    } catch (err) {
+      setFiles([]);
+      setOpened(null);
+      setDraft('');
+      if (err instanceof DriveNeedsPasswordError) {
+        setNeedsPassword(true);
+        setAuthError(err.message);
+        return;
+      }
+      setAuthError(err instanceof Error ? err.message : 'Could not unlock Google Drive.');
+    } finally {
+      setUnlocking(false);
+    }
   }
 
   async function openFile(id: string) {
@@ -131,12 +185,17 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
       setDraft(file.content);
     } catch (err) {
       setOpened(null);
-      if (err instanceof DriveClosedError) {
-        setClosedMessage(err.message);
-        setNotice(err.message);
-      } else {
-        setListError(err instanceof Error ? err.message : 'Could not open that Drive file.');
-      }
+        if (err instanceof DriveNeedsPasswordError) {
+          setNeedsPassword(true);
+          setAuthError(err.message);
+          setOpened(null);
+          setDraft('');
+        } else if (err instanceof DriveClosedError) {
+          setClosedMessage(err.message);
+          setNotice(err.message);
+        } else {
+          setListError(err instanceof Error ? err.message : 'Could not open that Drive file.');
+        }
     } finally {
       setReading(false);
     }
@@ -187,7 +246,13 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
           : `Saved in Google Drive for ${DRIVE_ACCOUNT}.`,
       );
     } catch (err) {
-      if (err instanceof DriveClosedError) {
+      if (err instanceof DriveNeedsPasswordError) {
+        setNeedsPassword(true);
+        setAuthError(err.message);
+        setOpened(null);
+        setFiles([]);
+        setDraft('');
+      } else if (err instanceof DriveClosedError) {
         setClosedMessage(err.message);
         setNotice(err.message);
       } else {
@@ -215,12 +280,34 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
     }
   }
 
-  const badge = closedMessage || listError ? 'CLOSED' : 'LIVE';
+  const badge = needsPassword ? 'LOCKED' : closedMessage ? 'CLOSED' : listError ? 'SETUP' : 'LIVE';
+  const showFiles = !needsPassword && !closedMessage && !listError;
 
   return (
     <WidgetFrame widget={widget} title="Google Drive" titleStyle={DRIVE_TITLE_STYLE} badge={badge}>
       <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">{DRIVE_ACCOUNT}</p>
-      {opened ? (
+      {needsPassword ? (
+        <form className="space-y-3" onSubmit={(event) => void onUnlock(event)}>
+          <p className="text-sm leading-relaxed text-white/70">
+            Enter the password to list, open, save, or send files in this Drive.
+          </p>
+          {authError ? <Notice>{authError}</Notice> : null}
+          <label className="block text-xs text-white/55">
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              aria-label="Google Drive password"
+              className="hud-input widget-no-drag mt-1 w-full"
+            />
+          </label>
+          <button type="submit" className="hud-btn-primary widget-no-drag w-full" disabled={unlocking}>
+            {unlocking ? 'Checking…' : 'Unlock'}
+          </button>
+        </form>
+      ) : opened ? (
         <div>
           <button
             type="button"
@@ -278,7 +365,7 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
         <>
           {closedMessage ? <Notice>{closedMessage}</Notice> : null}
           {listError ? <Notice>{listError}</Notice> : null}
-          {!closedMessage && !listError ? (
+          {showFiles ? (
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-xs text-white/45">{loading ? 'Loading the newest 25…' : 'Newest 25'}</p>
               <button
@@ -292,12 +379,12 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
               </button>
             </div>
           ) : null}
-          {!closedMessage && !listError && !loading && files.length === 0 ? (
+          {showFiles && !loading && files.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-3 py-6 text-center text-sm text-white/50">
               Drive has no files to show.
             </p>
           ) : null}
-          <ul className="space-y-2">
+          {showFiles ? <ul className="space-y-2">
             {files.map((file) => (
               <li key={file.id}>
                 <button
@@ -310,8 +397,8 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
                 </button>
               </li>
             ))}
-          </ul>
-          <form
+          </ul> : null}
+          {showFiles ? <form
             className="mt-3 flex gap-2"
             onSubmit={(event) => {
               event.preventDefault();
@@ -328,7 +415,7 @@ export function DriveWidget({ widget }: WidgetRenderProps) {
             <button type="submit" className="hud-btn-ghost widget-no-drag">
               New
             </button>
-          </form>
+          </form> : null}
           {notice ? <p className="mt-2 text-sm leading-relaxed text-cyan-100/90">{notice}</p> : null}
           <p className="mt-3 text-[11px] leading-relaxed text-white/40">
             Google Drive for this account. Files kept on this device stay in the Files widget.
