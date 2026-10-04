@@ -279,6 +279,12 @@ npm run dev   # Vite proxies /api/gmail to 127.0.0.1:8787
 
 Open Command Center at `http://127.0.0.1:5173/command-center/` (or another private host that reverse-proxies `/api/gmail` to that process). GitHub Pages will keep showing the closed state after this ships. A custom private hostname must match `GMAIL_PRIVATE_HOST` on the mail server. Do not publish port 8787.
 
+## Files
+
+The Files widget on Home is the file section. Tap a file to open it and read the contents. **Save** writes the text back into that file (or creates one from **File** after you name it, then Save). Notes stay in this browser’s `cc.v1.files` storage. They are not uploaded to GitHub Pages, Vercel, or the chat Space, so a stranger on the public site cannot read them.
+
+**Send** hands the open file off the app. When the phone browser can share, it opens the system share sheet (Messages, Mail, AirDrop, and the other apps on that phone). When it cannot, the file downloads into that browser’s downloads. A video clip stored as a link is shared as that link; the clip bytes stay where the link points. There is no cloud file account and no secret.
+
 ## Shell map
 
 | Piece | Where |
@@ -295,4 +301,4 @@ Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robi
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space.
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). File contents live in `files` on this device only. Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space.

@@ -40,7 +40,7 @@ registerWidget({
 registerWidget({
   type: 'files',
   title: 'Files',
-  description: 'Projects / Trades / Builds / Media / Backtests — local persist.',
+  description: 'Open, save, and send files kept on this device. Nothing is uploaded.',
   icon: 'files',
   defaultSize: { w: 6, h: 7 },
   minSize: { w: 3, h: 4 },
