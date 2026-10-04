@@ -15,6 +15,7 @@ export default {
       fontFamily: {
         display: ['Orbitron', 'Sora', 'system-ui', 'sans-serif'],
         sans: ['Sora', 'system-ui', 'sans-serif'],
+        serif: ['Fraunces', 'Iowan Old Style', 'Palatino Linotype', 'Palatino', 'Book Antiqua', 'serif'],
         mono: ['Share Tech Mono', 'ui-monospace', 'monospace'],
       },
       boxShadow: {

@@ -23,7 +23,7 @@ Live (GitHub Pages): https://simzy420.github.io/command-center/
 - Avatars use the three ref styles: cyan ringed sphere, purple energy pyramid, fragmented lightning cube.
 - 2-column grid on phone, 12-column on desktop.
 - Long-press / drag from the **widget header in Edit mode**. Use mode does not capture drag, so the page scrolls normally.
-- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. The Robinhood widget shows the latest portfolio snapshot pushed to the chat Space — account total and equity positions, with quotes only when that snapshot includes them. Optional Gmail/Trading stubs still show **Connect data source**.
+- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. The Robinhood widget shows the latest portfolio snapshot pushed to the chat Space — account total and equity positions, with quotes only when that snapshot includes them. Gmail lists the newest 25 messages from the private mail server, or stays closed until that server has `GMAIL_APP_PASSWORD`. The Trading stub still shows **Connect data source**.
 - No App Store binary, no unrestricted iframes, no live wallet signing, no fake live trading, no real payment backend.
 - Owner plan persists to `localStorage`. Guest/unpaid sees **Preview mode — upgrade to save** (billing is a stub in System).
 
@@ -81,7 +81,7 @@ export function MyWidget({ widget }: WidgetRenderProps) {
 
 2. **Register it** — add one `registerWidget({...})` call in `src/registry/index.ts`. Copy an existing block; set `type`, `title`, `defaultSize` (`w`/`h` in 12-col units), and `component`.
 
-3. **Optional feature flag** — set `featureFlag: 'gmailStub' | 'tradingStub'` so it only appears in the add sheet when that flag is on in System.
+3. **Optional feature flag** — set `featureFlag: 'tradingStub'` so a widget only appears in the add sheet when that flag is on in System. Gmail is a normal widget and is always in the add sheet.
 
 4. **Use it** — tap **+** on the dock (or stay in Edit mode) and pick the widget. It is appended to the current board JSON. Drag the header to place it.
 
@@ -263,6 +263,22 @@ If `ROBINHOOD_BRIDGE_SECRET` is not set on the Space, send `CHAT_BRIDGE_SECRET` 
 
 The widget treats a snapshot older than 10 minutes as stale (`Updated 12m ago`). Empty state: **Waiting for first sync…**
 
+## Gmail
+
+The **Gmail** section is a normal board widget. Open it from the **+** add-widget menu (the word Gmail is set in Fraunces, a serif, not the Sora body font). It is locked to `caseylsims@gmail.com`, lists only the newest 25 messages, opens one to show the body, and can send with To, subject, and body. From is always that mailbox.
+
+The phone never holds the app password. It calls same-origin `/api/gmail/*` only when the page is not a public host (GitHub Pages, the Hugging Face Space, Vercel, Netlify, Cloudflare Pages). On those hosts the widget stays closed and does not request the inbox or send.
+
+Mail itself is `server/gmail_mail.py` (IMAP `imap.gmail.com:993`, SMTP `smtp.gmail.com:465`). It reads `GMAIL_APP_PASSWORD` from the environment of that process. Until the variable is set, inbox and send return closed and do not log in. The process binds to `127.0.0.1:8787` (override with a private `GMAIL_LISTEN_HOST` only). It does not send CORS headers, and it rejects requests whose Host, Origin, or Referer is a public site. Do not add these routes to the chat Space, and do not put the secret in a `VITE_` variable, GitHub Pages, or this repo.
+
+```bash
+# On the private machine only. The value is an environment variable, not a file in git.
+GMAIL_APP_PASSWORD='your-google-app-password' npm run mail-server
+npm run dev   # Vite proxies /api/gmail to 127.0.0.1:8787
+```
+
+Open Command Center at `http://127.0.0.1:5173/command-center/` (or another private host that reverse-proxies `/api/gmail` to that process). GitHub Pages will keep showing the closed state after this ships. A custom private hostname must match `GMAIL_PRIVATE_HOST` on the mail server. Do not publish port 8787.
+
 ## Shell map
 
 | Piece | Where |
@@ -275,7 +291,7 @@ The widget treats a snapshot older than 10 minutes as stale (`Updated 12m ago`).
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
 
-Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, plus flagged `gmail` and `trading` empty stubs. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
+Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, plus the flagged `trading` empty stub. Gmail is in the add sheet without a feature flag. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
 
 ## Persistence keys
 

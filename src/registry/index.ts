@@ -7,7 +7,9 @@ import { ImageGenWidget } from '@/components/widgets/ImageGenWidget';
 import { WatchlistWidget } from '@/components/widgets/WatchlistWidget';
 import { RobinhoodWidget } from '@/components/widgets/RobinhoodWidget';
 import { ComputeWidget } from '@/components/widgets/ComputeWidget';
-import { GmailStubWidget, TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
+import { TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
+import { GmailWidget } from '@/components/widgets/GmailWidget';
+import { GMAIL_TITLE_STYLE } from '@/adapters/gmail/policy';
 import type { FeatureFlags } from '@/store/sessionStore';
 
 const registry = new Map<string, WidgetDefinition>();
@@ -107,13 +109,13 @@ registerWidget({
 
 registerWidget({
   type: 'gmail',
-  title: 'Gmail stub',
-  description: 'Feature-flagged empty pane.',
+  title: 'Gmail',
+  description: 'Newest 25 messages in caseylsims@gmail.com. Read a message or send from the private mail server.',
   icon: 'mail',
-  defaultSize: { w: 6, h: 6 },
-  minSize: { w: 3, h: 4 },
-  featureFlag: 'gmailStub',
-  component: GmailStubWidget,
+  defaultSize: { w: 12, h: 10 },
+  minSize: { w: 4, h: 6 },
+  titleStyle: GMAIL_TITLE_STYLE,
+  component: GmailWidget,
 });
 
 registerWidget({

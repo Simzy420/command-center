@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import type { FeatureFlags } from '@/store/sessionStore';
 import type { WidgetInstance } from '@/types/layout';
 
@@ -15,6 +15,8 @@ export interface WidgetDefinition {
   defaultSize: { w: number; h: number };
   minSize: { w: number; h: number };
   defaultSettings?: Record<string, unknown>;
+  /** Optional label face. Gmail uses a serif so the word is not set in the body font. */
+  titleStyle?: CSSProperties;
   /** Hide from add-sheet unless this flag is on */
   featureFlag?: keyof FeatureFlags;
   component: ComponentType<WidgetRenderProps>;

@@ -218,10 +218,6 @@ export function SideDrawer() {
         </div>
 
         <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Flags</p>
-        <label className="mb-2 flex items-center justify-between text-sm">
-          <span>Gmail stub</span>
-          <input type="checkbox" checked={flags.gmailStub} onChange={(e) => setFlag('gmailStub', e.target.checked)} />
-        </label>
         <label className="mb-4 flex items-center justify-between text-sm">
           <span>Trading stub</span>
           <input type="checkbox" checked={flags.tradingStub} onChange={(e) => setFlag('tradingStub', e.target.checked)} />

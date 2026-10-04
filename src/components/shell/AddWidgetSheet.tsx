@@ -35,7 +35,16 @@ export function AddWidgetSheet() {
                   setAddOpen(false);
                 }}
               >
-                <p className="font-display text-sm uppercase tracking-widest text-white">{def.title}</p>
+                <p
+                  className={
+                    def.titleStyle
+                      ? 'text-lg text-white'
+                      : 'font-display text-sm uppercase tracking-widest text-white'
+                  }
+                  style={def.titleStyle}
+                >
+                  {def.title}
+                </p>
                 <p className="text-xs text-white/50">{def.description}</p>
               </button>
             </li>

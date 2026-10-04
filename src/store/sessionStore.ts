@@ -7,7 +7,6 @@ export type InteractionMode = 'use' | 'edit';
 export type Plan = 'owner' | 'guest';
 
 export interface FeatureFlags {
-  gmailStub: boolean;
   tradingStub: boolean;
 }
 
@@ -19,7 +18,7 @@ interface SessionSnapshot {
 const KEY = 'session';
 
 function loadSession(): SessionSnapshot {
-  return readJson<SessionSnapshot>(KEY, { plan: 'owner', flags: { gmailStub: false, tradingStub: false } });
+  return readJson<SessionSnapshot>(KEY, { plan: 'owner', flags: { tradingStub: false } });
 }
 
 interface SessionState {

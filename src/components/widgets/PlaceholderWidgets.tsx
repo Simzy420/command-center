@@ -1,14 +1,6 @@
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import type { WidgetRenderProps } from '@/registry/types';
 
-export function GmailStubWidget({ widget }: WidgetRenderProps) {
-  return (
-    <WidgetFrame widget={widget} title="Gmail" badge="FLAG">
-      <EmptyDataSource label="Gmail" detail="Feature-flagged stub. No mock inbox. Connect Gmail when you are ready." />
-    </WidgetFrame>
-  );
-}
-
 export function TradingStubWidget({ widget }: WidgetRenderProps) {
   return (
     <WidgetFrame widget={widget} title="Trading" badge="FLAG">
