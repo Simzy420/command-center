@@ -4,6 +4,7 @@ import { OpenAiKeyFields } from '@/components/image/OpenAiKeyFields';
 import { StillProviderSwitch } from '@/components/image/StillProviderSwitch';
 import type { GeneratedImage } from '@/adapters/imagegen';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
+import { PERCHANCE_PHOTO_URL } from '@/adapters/perchance';
 import { Wan22Panel } from '@/components/widgets/Wan22Panel';
 import { SwaprPanel } from '@/components/widgets/SwaprPanel';
 import { WanExtendPanel } from '@/components/widgets/WanExtendPanel';
@@ -64,6 +65,14 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
           Swapr
         </button>
       </div>
+      <a
+        href={PERCHANCE_PHOTO_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hud-btn-ghost widget-no-drag mb-3 min-h-[48px] w-full normal-case tracking-normal"
+      >
+        Perchance (free)
+      </a>
       <ModelPanel model={model} />
     </WidgetFrame>
   );
