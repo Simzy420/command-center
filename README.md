@@ -279,6 +279,14 @@ npm run dev   # Vite proxies /api/gmail to 127.0.0.1:8787
 
 Open Command Center at `http://127.0.0.1:5173/command-center/` (or another private host that reverse-proxies `/api/gmail` to that process). GitHub Pages will keep showing the closed state after this ships. A custom private hostname must match `GMAIL_PRIVATE_HOST` on the mail server. Do not publish port 8787.
 
+## Game
+
+**Game** is a normal board widget. Open it from the **+** add-widget menu. The button is labeled **Game** and opens this Claude artifact in a new tab:
+
+https://claude.ai/code/artifact/e0be7c72-8356-45f3-a242-90e73c1ff645?org=ab3580a3-ad7b-4517-a457-271ef6ae591c
+
+The artifact page could not be read from here. The HTML title is only “Claude Artifact,” the frame host returns 404, and Claude’s page will not allow another site to embed it (`frame-ancestors 'self'`). The game itself is not included in this app. Claude may ask you to sign in before it loads.
+
 ## Files
 
 The Files widget on Home is the file section. Tap a file to open it and read the contents. **Save** writes the text back into that file (or creates one from **File** after you name it, then Save). Notes stay in this browser’s `cc.v1.files` storage. They are not uploaded to GitHub Pages, Vercel, or the chat Space, so a stranger on the public site cannot read them.
@@ -297,7 +305,7 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
 
-Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, plus the flagged `trading` empty stub. Gmail is in the add sheet without a feature flag. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
+Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, `game`, plus the flagged `trading` empty stub. Gmail and Game are in the add sheet without a feature flag. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
 
 ## Persistence keys
 
