@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { AiToolsMenuButton, AiToolsPanel } from '@/components/shell/aiTools';
 import { DEFAULT_BOARDS, type LayoutDocument } from '@/types/layout';
 import { cn } from '@/lib/cn';
 import { DEFAULT_CHAT_API_BASE, isChatBridgeConfigured, resolveChatApiBase } from '@/adapters/chat';
@@ -36,6 +37,8 @@ export function SideDrawer() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [chatDraft, setChatDraft] = useState('');
   const [chatMsg, setChatMsg] = useState('');
+  const [menuView, setMenuView] = useState<'system' | 'tools'>('system');
+  if (!open && menuView !== 'system') setMenuView('system');
   const bridgeConfigured = isChatBridgeConfigured();
   const resolvedChatBase = resolveChatApiBase();
   const chatStatusLine = !bridgeConfigured
@@ -75,12 +78,18 @@ export function SideDrawer() {
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
+        {menuView === 'tools' ? (
+          <AiToolsPanel onBack={() => setMenuView('system')} onClose={() => setDrawerOpen(false)} />
+        ) : (
+          <>
         <div className="mb-4 flex items-center justify-between">
           <p className="font-display text-sm uppercase tracking-[0.22em] text-cyan-300">System</p>
           <button type="button" className="rounded-lg p-2 hover:bg-white/5" onClick={() => setDrawerOpen(false)}>
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        <AiToolsMenuButton onOpen={() => setMenuView('tools')} />
 
         <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Boards</p>
         <div className="mb-5 grid grid-cols-2 gap-2">
@@ -229,6 +238,8 @@ export function SideDrawer() {
         <p className="font-mono text-[11px] leading-relaxed text-white/40">
           Default is Use mode. Observe Only never blocks commands. No live wallets, no fake markets, no App Store build.
         </p>
+          </>
+        )}
       </aside>
     </>
   );

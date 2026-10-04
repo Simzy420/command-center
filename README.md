@@ -285,6 +285,10 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 
 **Send** hands the open file off the app. When the phone browser can share, it opens the system share sheet (Messages, Mail, AirDrop, and the other apps on that phone). When it cannot, the file downloads into that browser’s downloads. A video clip stored as a link is shared as that link; the clip bytes stay where the link points. There is no cloud file account and no secret.
 
+## AI Tools
+
+The side menu is the drawer opened from the menu button at the top left, or from **System** on the dock. The first item is labeled **AI Tools**. Opening it lists ChatGPT, Base44, Cursor, Buffer, Linear, Replit, and Perplexity. Each row uses that tool’s name and opens its site in a new tab.
+
 ## Shell map
 
 | Piece | Where |
@@ -292,7 +296,7 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 | Top bar (search stub, active bot, Use/Edit, Observe Only pill) | `src/components/shell/TopBar.tsx` |
 | Entity swarm + named avatars | `src/components/shell/EntitySwarm.tsx` |
 | JSON grid | `src/components/shell/GridBoard.tsx` |
-| Side drawer (boards, export/import, billing stub, image vault, chat bridge, flags) | `src/components/shell/SideDrawer.tsx` |
+| Side drawer (AI Tools, boards, export/import, billing stub, image vault, chat bridge, flags) | `src/components/shell/SideDrawer.tsx` |
 | Mobile dock | `src/components/shell/MobileDock.tsx` |
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
