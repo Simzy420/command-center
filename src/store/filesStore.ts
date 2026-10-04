@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { uid } from '@/lib/ids';
 import { readJson, writeJson } from '@/store/persist';
+import { applyFileSave, MAX_FILE_CHARS } from './fileDocument';
 
 export interface FileNode {
   id: string;
@@ -13,6 +14,8 @@ export interface FileNode {
 
 const ROOT_FOLDERS = ['Projects', 'Trades', 'Builds', 'Media', 'Backtests'] as const;
 const KEY = 'files';
+
+export { MAX_FILE_CHARS };
 
 function seed(): FileNode[] {
   return ROOT_FOLDERS.map((name) => ({
@@ -36,7 +39,8 @@ interface FilesState {
   currentFolderId: string | null;
   setQuery: (q: string) => void;
   openFolder: (id: string | null) => void;
-  addFile: (parentId: string | null, name: string) => void;
+  addFile: (parentId: string | null, name: string, content?: string) => string;
+  saveFile: (id: string, content: string) => { ok: true } | { ok: false; error: string };
   addFolder: (parentId: string | null, name: string) => void;
   addMediaUrl: (prompt: string, url: string) => void;
   rename: (id: string, name: string) => void;
@@ -53,20 +57,30 @@ export const useFilesStore = create<FilesState>((set, get) => ({
   currentFolderId: null,
   setQuery: (query) => set({ query }),
   openFolder: (currentFolderId) => set({ currentFolderId }),
-  addFile: (parentId, name) => {
+  addFile: (parentId, name, content = '') => {
+    if (content.length > MAX_FILE_CHARS) return '';
+    const id = uid('file');
     const nodes = [
       ...get().nodes,
       {
-        id: uid('file'),
+        id,
         name,
         kind: 'file' as const,
         parentId,
-        content: '',
+        content,
         updatedAt: Date.now(),
       },
     ];
     save(nodes);
     set({ nodes });
+    return id;
+  },
+  saveFile: (id, content) => {
+    const drafted = applyFileSave(get().nodes, id, content);
+    if (!drafted.ok) return drafted;
+    save(drafted.nodes);
+    set({ nodes: drafted.nodes });
+    return { ok: true };
   },
   addMediaUrl: (prompt, url) => {
     const folderId = 'folder_media';
