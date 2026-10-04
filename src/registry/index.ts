@@ -9,7 +9,9 @@ import { RobinhoodWidget } from '@/components/widgets/RobinhoodWidget';
 import { ComputeWidget } from '@/components/widgets/ComputeWidget';
 import { TradingStubWidget } from '@/components/widgets/PlaceholderWidgets';
 import { GmailWidget } from '@/components/widgets/GmailWidget';
+import { DriveWidget } from '@/components/widgets/DriveWidget';
 import { GMAIL_TITLE_STYLE } from '@/adapters/gmail/policy';
+import { DRIVE_TITLE_STYLE } from '@/adapters/drive/policy';
 import type { FeatureFlags } from '@/store/sessionStore';
 
 const registry = new Map<string, WidgetDefinition>();
@@ -105,6 +107,17 @@ registerWidget({
   defaultSize: { w: 6, h: 6 },
   minSize: { w: 3, h: 4 },
   component: ComputeWidget,
+});
+
+registerWidget({
+  type: 'drive',
+  title: 'Google Drive',
+  description: 'Open, save, and send files in caseylsims@gmail.com. Separate from files kept on this device.',
+  icon: 'files',
+  defaultSize: { w: 6, h: 8 },
+  minSize: { w: 3, h: 5 },
+  titleStyle: DRIVE_TITLE_STYLE,
+  component: DriveWidget,
 });
 
 registerWidget({

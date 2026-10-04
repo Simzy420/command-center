@@ -13,6 +13,7 @@ npm run build
 # emits the JS module that import resolves, and this repeats it here so the
 # file exists even if only the project build command runs.
 npm run vercel-build
+node scripts/attach-drive-function.mjs
 if [ "$START" != "$ROOT" ]; then
   mkdir -p "$START/dist"
   cp -R "$ROOT/dist/." "$START/dist/"

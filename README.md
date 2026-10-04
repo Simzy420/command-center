@@ -23,7 +23,7 @@ Live (GitHub Pages): https://simzy420.github.io/command-center/
 - Avatars use the three ref styles: cyan ringed sphere, purple energy pyramid, fragmented lightning cube.
 - 2-column grid on phone, 12-column on desktop.
 - Long-press / drag from the **widget header in Edit mode**. Use mode does not capture drag, so the page scrolls normally.
-- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. The Robinhood widget shows the latest portfolio snapshot pushed to the chat Space — account total and equity positions, with quotes only when that snapshot includes them. Gmail lists the newest 25 messages from the private mail server, or stays closed until that server has `GMAIL_APP_PASSWORD`. The Trading stub still shows **Connect data source**.
+- No fake prices, charts, EMAs, P&L, or emails. The watchlist shows live CoinGecko USD price and 24h change only — no candles. The Robinhood widget shows the latest portfolio snapshot pushed to the chat Space — account total and equity positions, with quotes only when that snapshot includes them. Gmail lists the newest 25 messages from the private mail server, or stays closed until that server has `GMAIL_APP_PASSWORD`. Google Drive lists the newest 25 files after the Drive section password checks out on the server. The rest of the app stays open. The Trading stub still shows **Connect data source**.
 - No App Store binary, no unrestricted iframes, no live wallet signing, no fake live trading, no real payment backend.
 - Owner plan persists to `localStorage`. Guest/unpaid sees **Preview mode — upgrade to save** (billing is a stub in System).
 
@@ -279,6 +279,62 @@ npm run dev   # Vite proxies /api/gmail to 127.0.0.1:8787
 
 Open Command Center at `http://127.0.0.1:5173/command-center/` (or another private host that reverse-proxies `/api/gmail` to that process). GitHub Pages will keep showing the closed state after this ships. A custom private hostname must match `GMAIL_PRIVATE_HOST` on the mail server. Do not publish port 8787.
 
+## Google Drive
+
+The **Google Drive** section is a separate board widget from Files. Open it from the **+** add-widget menu. The title stays “Google Drive”. It is locked to `caseylsims@gmail.com`. It lists the newest 25 files (folders and trash omitted), opens one to show its text, **Save** creates a text file or updates a text file already in Drive, and **Send** hands the open text to this phone’s share sheet (Messages, Mail, AirDrop) or downloads it when the browser has no share sheet. The on-device Files widget is unchanged.
+
+The rest of Command Center stays open. Only the Google Drive section asks for a password. Wrong or missing password gets no file list, no save, and no send. The phone never holds the password or a Google secret. It calls same-origin `/api/drive/*` on the Vercel site. The server checks `COMMAND_CENTER_PASSWORD` and only then talks to Google. GitHub Pages and the chat Space have no Drive server, so those hosts still show nothing from Drive.
+
+Drive on the Vercel site is the serverless route under `api/drive/`. It talks to the **Google Drive API v3** (`https://www.googleapis.com/drive/v3`) with OAuth scope `https://www.googleapis.com/auth/drive`. The narrower `drive.file` scope cannot see files this app did not create, so the route uses the full Drive scope. `npm run dev` serves the same route. `server/drive_api.py` is the optional loopback bridge and uses the same password check.
+
+| Secret | Where it lives |
+| --- | --- |
+| `COMMAND_CENTER_PASSWORD` | Vercel project environment (server only). Also the environment of `npm run dev` or `server/drive_api.py` when you run them yourself. |
+| `GOOGLE_DRIVE_CLIENT_ID` | Same server environment |
+| `GOOGLE_DRIVE_CLIENT_SECRET` | Same server environment |
+| `GOOGLE_DRIVE_REFRESH_TOKEN` | Same server environment |
+
+There is no service-account key in this repo. Do not put any of those values in a `VITE_` variable, GitHub Pages, the chat Space, or git.
+
+Until `COMMAND_CENTER_PASSWORD` is set, the Drive section accepts no password and returns no files. After the right password, list, open, and save still return no files until the three Google variables are set, and they do not call Google before that. The route sends no CORS headers. Google Docs, Sheets, and Slides open as exported text. Save writes a new `.txt` file for those, because the bridge does not overwrite Google’s own file types. Text files update in place.
+
+One-time consent, on the private machine:
+
+1. In Google Cloud, enable the **Google Drive API**.
+2. Create an OAuth client of type **Desktop**. On the consent screen, add `caseylsims@gmail.com` as a test user while the app is in testing.
+3. Add redirect URI `http://127.0.0.1:8799/`.
+4. Export the client id and secret in the shell, then print the consent URL:
+
+```bash
+GOOGLE_DRIVE_CLIENT_ID='...' GOOGLE_DRIVE_CLIENT_SECRET='...' python3 server/drive_auth.py
+```
+
+5. Open that URL while signed in as `caseylsims@gmail.com` and approve Drive access. The browser will land on `http://127.0.0.1:8799/?code=...` (the page itself does not load). Copy the `code` value.
+6. Exchange it. The refresh token is printed in the terminal only:
+
+```bash
+GOOGLE_DRIVE_CLIENT_ID='...' GOOGLE_DRIVE_CLIENT_SECRET='...' python3 server/drive_auth.py --code 'CODE'
+```
+
+7. On the **Vercel project** for the phone site, set these environment variables for Production (and Preview if you use preview URLs). Do not prefix them with `VITE_`.
+
+```text
+COMMAND_CENTER_PASSWORD
+GOOGLE_DRIVE_CLIENT_ID
+GOOGLE_DRIVE_CLIENT_SECRET
+GOOGLE_DRIVE_REFRESH_TOKEN
+```
+
+Redeploy after saving them. That is the deploy step. The phone opens the Vercel site, adds **Google Drive**, and enters `COMMAND_CENTER_PASSWORD`. Files, chat, and the other sections stay usable with no password.
+
+Local check, with the same variables in the shell and not in a file that gets committed:
+
+```bash
+npm run dev
+```
+
+`npm run drive-server` remains the optional loopback bridge on `127.0.0.1:8788`. It also requires `COMMAND_CENTER_PASSWORD` before it lists or writes. Do not publish port 8788. GitHub Pages still has no Drive API.
+
 ## Files
 
 The Files widget on Home is the file section. Tap a file to open it and read the contents. **Save** writes the text back into that file (or creates one from **File** after you name it, then Save). Notes stay in this browser’s `cc.v1.files` storage. They are not uploaded to GitHub Pages, Vercel, or the chat Space, so a stranger on the public site cannot read them.
@@ -301,7 +357,7 @@ The side menu is the drawer opened from the menu button at the top left, or from
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
 
-Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, plus the flagged `trading` empty stub. Gmail is in the add sheet without a feature flag. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
+Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, `drive`, plus the flagged `trading` empty stub. Gmail and Google Drive are in the add sheet without a feature flag. Google Drive is not seeded onto the starter boards. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
 
 ## Persistence keys
 
