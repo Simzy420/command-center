@@ -1,4 +1,4 @@
-import type { WidgetInstance } from '@/types/layout';
+import { DEFAULT_BOARDS, type LayoutDocument, type WidgetInstance } from '../types/layout.ts';
 import { deriveSecretKey, fromHex, hashPassword, openSecrets, randomBytes, sealSecrets, toHex, verifyPassword } from './crypto.ts';
 import { isPrivateApp } from './privateApps.ts';
 
@@ -16,12 +16,18 @@ export interface SealedSecrets {
 
 export interface ProfileDatabase {
   accounts: ProfileAccount[];
+  /** Older private-widget lists. Boards now live in `layouts`. */
   widgets: Record<string, WidgetInstance[]>;
+  layouts: Record<string, LayoutDocument>;
   secrets: Record<string, SealedSecrets>;
 }
 
+export function emptyUserLayout(now = 0): LayoutDocument {
+  return { version: 1, boards: DEFAULT_BOARDS, widgets: [], updatedAt: now };
+}
+
 export function emptyProfileDatabase(): ProfileDatabase {
-  return { accounts: [], widgets: {}, secrets: {} };
+  return { accounts: [], widgets: {}, layouts: {}, secrets: {} };
 }
 
 export async function createProfileAccount(
@@ -45,9 +51,34 @@ export async function createProfileAccount(
   };
   const key = await deriveSecretKey(password, salt);
   return {
-    db: { ...db, accounts: [...db.accounts, account], widgets: { ...db.widgets, [id]: [] } },
+    db: {
+      ...db,
+      accounts: [...db.accounts, account],
+      widgets: { ...(db.widgets ?? {}), [id]: [] },
+      layouts: { ...(db.layouts ?? {}), [id]: emptyUserLayout() },
+    },
     account,
     key,
+  };
+}
+
+export function readLayout(db: ProfileDatabase, profileId: string): LayoutDocument {
+  const saved = db.layouts?.[profileId];
+  if (saved && saved.version === 1 && Array.isArray(saved.widgets)) return saved;
+  const legacy = db.widgets?.[profileId];
+  if (Array.isArray(legacy) && legacy.length > 0) {
+    return { version: 1, boards: DEFAULT_BOARDS, widgets: legacy, updatedAt: 0 };
+  }
+  return emptyUserLayout();
+}
+
+export function writeLayout(db: ProfileDatabase, profileId: string, layout: LayoutDocument): ProfileDatabase {
+  return {
+    ...db,
+    layouts: {
+      ...db.layouts,
+      [profileId]: { ...layout, version: 1, updatedAt: layout.updatedAt },
+    },
   };
 }
 

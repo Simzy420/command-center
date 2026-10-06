@@ -5,7 +5,7 @@ import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import { cn } from '@/lib/cn';
 import { useActivityStore } from '@/store/activityStore';
 import { useChatStore } from '@/store/chatStore';
-import { useLayoutStore } from '@/store/layoutStore';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import type { WidgetRenderProps } from '@/registry/types';
 
@@ -18,7 +18,7 @@ export function ChatWidget({ widget }: WidgetRenderProps) {
   const errors = useChatStore((s) => s.errors);
   const events = useActivityStore((s) => s.events);
   const activeBotId = useSessionStore((s) => s.activeBotId);
-  const updateSettings = useLayoutStore((s) => s.updateSettings);
+  const updateSettings = useProfileStore((s) => s.updateSettings);
 
   const selected = useMemo(() => {
     const raw = widget.settings.selectedBotIds;

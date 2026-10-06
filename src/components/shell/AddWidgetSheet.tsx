@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { listWidgets } from '@/registry';
-import { useLayoutStore } from '@/store/layoutStore';
 import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { X } from 'lucide-react';
@@ -10,10 +9,9 @@ export function AddWidgetSheet() {
   const setAddOpen = useSessionStore((s) => s.setAddOpen);
   const flags = useSessionStore((s) => s.flags);
   const board = useSessionStore((s) => s.board);
-  const addWidget = useLayoutStore((s) => s.addWidget);
   const activeId = useProfileStore((s) => s.activeId);
   const activeName = useProfileStore((s) => s.activeName);
-  const addPrivateWidget = useProfileStore((s) => s.addPrivateWidget);
+  const addWidget = useProfileStore((s) => s.addWidget);
   const [notice, setNotice] = useState('');
   useEffect(() => {
     if (!open) setNotice('');
@@ -30,8 +28,10 @@ export function AddWidgetSheet() {
           </button>
         </div>
         {activeName ? (
-          <p className="mb-3 text-xs text-white/50">Private apps are added to {activeName}.</p>
-        ) : null}
+          <p className="mb-3 text-xs text-white/50">Adding to {activeName}. This board is saved on your profile.</p>
+        ) : (
+          <p className="mb-3 text-xs text-white/50">Casey's board is view only. Sign in to build your own.</p>
+        )}
         {notice ? <p className="mb-3 text-xs text-rose-200">{notice}</p> : null}
         <ul className="grid grid-cols-1 gap-2">
           {listWidgets(flags).map((def) => (
@@ -47,14 +47,8 @@ export function AddWidgetSheet() {
                     h: def.defaultSize.h,
                     settings: def.defaultSettings,
                   };
-                  if (def.privateApp) {
-                    if (!activeId) {
-                      setNotice('Log in to add this to your profile.');
-                      return;
-                    }
-                    addPrivateWidget(board, def.type, size);
-                    setNotice('');
-                    setAddOpen(false);
+                  if (!activeId) {
+                    setNotice('Sign in to add widgets to your own board.');
                     return;
                   }
                   addWidget(board, def.type, size);

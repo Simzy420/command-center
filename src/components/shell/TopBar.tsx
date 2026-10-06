@@ -2,6 +2,7 @@ import { Menu, Pencil, Search } from 'lucide-react';
 import { BOT_ROSTER } from '@/bots/roster';
 import { BotAvatar } from '@/components/avatars/BotAvatar';
 import { cn } from '@/lib/cn';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 
 export function TopBar() {
@@ -15,6 +16,7 @@ export function TopBar() {
   const setSearch = useSessionStore((s) => s.setSearch);
   const activeBotId = useSessionStore((s) => s.activeBotId);
   const setActiveBot = useSessionStore((s) => s.setActiveBot);
+  const signedIn = useProfileStore((s) => Boolean(s.activeId));
   const bot = BOT_ROSTER.find((b) => b.id === activeBotId) ?? BOT_ROSTER[0];
 
   return (
@@ -82,8 +84,17 @@ export function TopBar() {
         </label>
         <button
           type="button"
-          onClick={() => setMode(mode === 'edit' ? 'use' : 'edit')}
-          className={cn('hud-btn-primary flex items-center gap-1 px-3', mode === 'edit' && 'hud-btn-edit')}
+          disabled={!signedIn}
+          aria-label={signedIn ? 'Edit your board' : 'Sign in to edit your board'}
+          onClick={() => {
+            if (!signedIn) return;
+            setMode(mode === 'edit' ? 'use' : 'edit');
+          }}
+          className={cn(
+            'hud-btn-primary flex items-center gap-1 px-3',
+            mode === 'edit' && 'hud-btn-edit',
+            !signedIn && 'opacity-40',
+          )}
         >
           <Pencil className="h-4 w-4" />
           {mode === 'edit' ? 'Edit' : 'Use'}

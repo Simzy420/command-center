@@ -1,8 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { GripVertical, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { isPrivateApp } from '@/profiles/privateApps';
-import { useLayoutStore } from '@/store/layoutStore';
 import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import type { WidgetInstance } from '@/types/layout';
@@ -35,7 +33,7 @@ interface Props {
 export function WidgetFrame({ widget, title, badge = 'LIVE', titleStyle, children, footer }: Props) {
   const mode = useSessionStore((s) => s.mode);
   const setActiveWidget = useSessionStore((s) => s.setActiveWidget);
-  const removeWidget = useLayoutStore((s) => s.removeWidget);
+  const removeWidget = useProfileStore((s) => s.removeWidget);
   const accent = ACCENT[widget.type] ?? 'accent-cyan';
 
   return (
@@ -76,8 +74,7 @@ export function WidgetFrame({ widget, title, badge = 'LIVE', titleStyle, childre
             aria-label="Remove widget"
             onClick={(e) => {
               e.stopPropagation();
-              if (isPrivateApp(widget.type)) useProfileStore.getState().removePrivateWidget(widget.id);
-              else removeWidget(widget.id);
+              removeWidget(widget.id);
             }}
           >
             <X className="h-4 w-4" />

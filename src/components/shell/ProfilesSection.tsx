@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
+import { useSessionStore } from '@/store/sessionStore';
 
 export function ProfilesSection() {
   const activeId = useProfileStore((s) => s.activeId);
@@ -7,6 +8,7 @@ export function ProfilesSection() {
   const createAccount = useProfileStore((s) => s.createAccount);
   const login = useProfileStore((s) => s.login);
   const logout = useProfileStore((s) => s.logout);
+  const setMode = useSessionStore((s) => s.setMode);
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -34,9 +36,17 @@ export function ProfilesSection() {
         <div className="space-y-2 rounded-2xl border border-white/10 p-3 text-sm text-white/70" data-profile-status="in">
           <p>Signed in as {activeName}</p>
           <p className="text-xs leading-relaxed text-white/45">
-            Private apps added from + stay on this profile, with their saved credentials.
+            Widgets you add and the way you arrange them are saved to this profile. Casey's board stays as it is.
           </p>
-          <button type="button" className="hud-btn-ghost w-full" disabled={busy} onClick={() => void logout()}>
+          <button
+            type="button"
+            className="hud-btn-ghost w-full"
+            disabled={busy}
+            onClick={() => {
+              setMode('use');
+              void logout();
+            }}
+          >
             Log out
           </button>
         </div>
@@ -66,6 +76,9 @@ export function ProfilesSection() {
             autoComplete="current-password"
             aria-label="Profile password"
           />
+          <p className="text-xs leading-relaxed text-white/45">
+            Casey's board stays view only. Your password is hashed on this device and is not stored in plain text.
+          </p>
           {error ? <p className="text-xs text-rose-200">{error}</p> : null}
           <button type="submit" className="hud-btn-primary w-full" disabled={busy}>
             Log in

@@ -1,24 +1,21 @@
 import { create } from 'zustand';
 import { lockDriveSession } from '@/adapters/drive/client';
+import { createStarterLayout } from '@/data/starterLayout';
 import { uid } from '@/lib/ids';
 import { fromGridLayout, type GridItem } from '@/lib/grid';
 import {
-  addPrivateWidget,
   createProfileAccount,
   emptyProfileDatabase,
-  movePrivateWidgets,
-  privateWidgetsFor,
+  readLayout,
   readProfileSecret,
-  removePrivateWidget,
   unlockProfile,
+  writeLayout,
   writeProfileSecret,
   type ProfileAccount,
   type ProfileDatabase,
 } from '@/profiles/data';
-import { isPrivateApp } from '@/profiles/privateApps';
 import { readJson, writeJsonForced } from '@/store/persist';
-import { useLayoutStore } from '@/store/layoutStore';
-import type { BoardId, WidgetInstance } from '@/types/layout';
+import { DEFAULT_BOARDS, type BoardId, type LayoutDocument, type WidgetInstance } from '@/types/layout';
 
 const KEY = 'profiles';
 const ACTIVE_KEY = 'cc.v1.profile.active';
@@ -31,6 +28,7 @@ function loadDb(): ProfileDatabase {
   return {
     accounts: saved.accounts,
     widgets: saved.widgets && typeof saved.widgets === 'object' ? saved.widgets : {},
+    layouts: saved.layouts && typeof saved.layouts === 'object' ? saved.layouts : {},
     secrets: saved.secrets && typeof saved.secrets === 'object' ? saved.secrets : {},
   };
 }
@@ -64,30 +62,41 @@ async function dropDriveSession() {
 function signedIn(db: ProfileDatabase, account: ProfileAccount, key: CryptoKey) {
   secretKey = key;
   writeActiveId(account.id);
-  persist(db);
+  const layout = readLayout(db, account.id);
+  const next = writeLayout(db, account.id, layout);
+  persist(next);
   return {
-    db,
+    db: next,
     activeId: account.id,
     activeName: account.name,
-    widgets: privateWidgetsFor(db, account.id),
+    layout,
   };
+}
+
+function commit(set: (partial: Partial<ProfileState>) => void, db: ProfileDatabase, activeId: string, layout: LayoutDocument) {
+  const next = writeLayout(db, activeId, layout);
+  persist(next);
+  set({ db: next, layout });
 }
 
 interface ProfileState {
   db: ProfileDatabase;
   activeId: string | null;
   activeName: string;
-  widgets: WidgetInstance[];
+  layout: LayoutDocument | null;
   createAccount: (name: string, password: string) => Promise<void>;
   login: (name: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  addPrivateWidget: (
+  addWidget: (
     page: BoardId,
     type: string,
     opts?: { w?: number; h?: number; settings?: Record<string, unknown> },
   ) => void;
-  removePrivateWidget: (id: string) => void;
-  movePrivateWidgets: (page: BoardId, items: GridItem[], cols: number) => void;
+  removeWidget: (id: string) => void;
+  moveWidgets: (page: BoardId, items: GridItem[], cols: number) => void;
+  updateSettings: (id: string, settings: Record<string, unknown>) => void;
+  importLayout: (doc: LayoutDocument) => void;
+  resetMyBoard: () => void;
   saveCredential: (app: string, value: string) => Promise<void>;
   readCredential: (app: string) => Promise<string>;
 }
@@ -100,7 +109,7 @@ export const useProfileStore = create<ProfileState>((set, get) => {
     db,
     activeId: restored?.id ?? null,
     activeName: restored?.name ?? '',
-    widgets: restored ? privateWidgetsFor(db, restored.id) : [],
+    layout: restored ? readLayout(db, restored.id) : null,
     createAccount: async (name, password) => {
       const created = await createProfileAccount(get().db, name, password, uid('profile'));
       await dropDriveSession();
@@ -115,15 +124,13 @@ export const useProfileStore = create<ProfileState>((set, get) => {
       secretKey = null;
       writeActiveId(null);
       await dropDriveSession();
-      set({ activeId: null, activeName: '', widgets: [] });
+      set({ activeId: null, activeName: '', layout: null });
     },
-    addPrivateWidget: (page, type, opts) => {
-      const { db, activeId } = get();
-      if (!activeId) throw new Error('Log in to add this to your profile.');
-      if (!isPrivateApp(type)) return;
-      const shared = useLayoutStore.getState().doc.widgets.filter((widget) => widget.page === page && !isPrivateApp(widget.type));
-      const mine = privateWidgetsFor(db, activeId).filter((widget) => widget.page === page);
-      const y = [...shared, ...mine].reduce((max, widget) => Math.max(max, widget.y + widget.h), 0);
+    addWidget: (page, type, opts) => {
+      const { db, activeId, layout } = get();
+      if (!activeId || !layout) throw new Error('Sign in to build your own board.');
+      const pageWidgets = layout.widgets.filter((widget) => widget.page === page);
+      const y = pageWidgets.reduce((max, widget) => Math.max(max, widget.y + widget.h), 0);
       const widget: WidgetInstance = {
         id: uid('w'),
         type,
@@ -134,24 +141,57 @@ export const useProfileStore = create<ProfileState>((set, get) => {
         page,
         settings: { ...(opts?.settings ?? {}) },
       };
-      const next = addPrivateWidget(db, activeId, widget);
-      persist(next);
-      set({ db: next, widgets: privateWidgetsFor(next, activeId) });
+      commit(set, db, activeId, { ...layout, widgets: [...layout.widgets, widget], updatedAt: Date.now() });
     },
-    removePrivateWidget: (id) => {
+    removeWidget: (id) => {
+      const { db, activeId, layout } = get();
+      if (!activeId || !layout) return;
+      commit(set, db, activeId, {
+        ...layout,
+        widgets: layout.widgets.filter((widget) => widget.id !== id),
+        updatedAt: Date.now(),
+      });
+    },
+    moveWidgets: (page, items, cols) => {
+      const { db, activeId, layout } = get();
+      if (!activeId || !layout) return;
+      const pageWidgets = layout.widgets.filter((widget) => widget.page === page);
+      const moved = new Map(fromGridLayout(items, pageWidgets, cols).map((item) => [item.id, item]));
+      commit(set, db, activeId, {
+        ...layout,
+        widgets: layout.widgets.map((widget) => {
+          const next = moved.get(widget.id);
+          return next ? { ...widget, x: next.x, y: next.y, w: next.w, h: next.h } : widget;
+        }),
+        updatedAt: Date.now(),
+      });
+    },
+    updateSettings: (id, settings) => {
+      const { db, activeId, layout } = get();
+      if (!activeId || !layout) return;
+      commit(set, db, activeId, {
+        ...layout,
+        widgets: layout.widgets.map((widget) =>
+          widget.id === id ? { ...widget, settings: { ...widget.settings, ...settings } } : widget,
+        ),
+        updatedAt: Date.now(),
+      });
+    },
+    importLayout: (doc) => {
+      const { db, activeId } = get();
+      if (!activeId) throw new Error('Sign in to save a board.');
+      if (!doc || doc.version !== 1 || !Array.isArray(doc.widgets)) throw new Error('Invalid layout JSON');
+      commit(set, db, activeId, {
+        version: 1,
+        boards: doc.boards?.length ? doc.boards : DEFAULT_BOARDS,
+        widgets: doc.widgets,
+        updatedAt: Date.now(),
+      });
+    },
+    resetMyBoard: () => {
       const { db, activeId } = get();
       if (!activeId) return;
-      const next = removePrivateWidget(db, activeId, id);
-      persist(next);
-      set({ db: next, widgets: privateWidgetsFor(next, activeId) });
-    },
-    movePrivateWidgets: (page, items, cols) => {
-      const { db, activeId } = get();
-      if (!activeId) return;
-      const pageWidgets = privateWidgetsFor(db, activeId).filter((widget) => widget.page === page);
-      const next = movePrivateWidgets(db, activeId, fromGridLayout(items, pageWidgets, cols));
-      persist(next);
-      set({ db: next, widgets: privateWidgetsFor(next, activeId) });
+      commit(set, db, activeId, createStarterLayout());
     },
     saveCredential: async (app, value) => {
       const { db, activeId } = get();
@@ -167,3 +207,4 @@ export const useProfileStore = create<ProfileState>((set, get) => {
     },
   };
 });
+
