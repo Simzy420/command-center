@@ -159,9 +159,11 @@ export function SideDrawer() {
             <OpenAiKeyFields framed={false} />
           ) : (
             <p>
-              {hasKey
-                ? `Pollinations is on. An OpenAI key is saved ${hint}. Switch to OpenAI to use it.`
-                : 'Pollinations is on. Generate does not need an OpenAI key.'}
+              {stillProvider === 'perchance'
+                ? 'Perchance is on. Generate does not need an OpenAI key.'
+                : hasKey
+                  ? `Pollinations is on. An OpenAI key is saved ${hint}. Switch to OpenAI to use it.`
+                  : 'Pollinations is on. Generate does not need an OpenAI key.'}
             </p>
           )}
         </div>

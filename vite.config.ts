@@ -49,6 +49,41 @@ export default defineConfig({
       },
     },
     {
+      name: 'perchance-api',
+      async configureServer(server) {
+        const { handlePerchanceImageRequest } = await import('./api/_lib/perchanceHttp.ts');
+        server.middlewares.use((req, res, next) => {
+          if (!req.url?.startsWith('/api/perchance-image')) {
+            next();
+            return;
+          }
+          handlePerchanceImageRequest(req, res).catch(() => {
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Perchance request failed.' }));
+            }
+          });
+        });
+      },
+      async configurePreviewServer(server) {
+        const { handlePerchanceImageRequest } = await import('./api/_lib/perchanceHttp.ts');
+        server.middlewares.use((req, res, next) => {
+          if (!req.url?.startsWith('/api/perchance-image')) {
+            next();
+            return;
+          }
+          handlePerchanceImageRequest(req, res).catch(() => {
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Perchance request failed.' }));
+            }
+          });
+        });
+      },
+    },
+    {
       name: 'drive-api',
       async configureServer(server) {
         const { handleDriveRequest } = await import('./api/_lib/handle.ts');

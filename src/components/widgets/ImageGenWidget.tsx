@@ -65,14 +65,6 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
           Swapr
         </button>
       </div>
-      <a
-        href={PERCHANCE_PHOTO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hud-btn-ghost widget-no-drag mb-3 min-h-[48px] w-full normal-case tracking-normal"
-      >
-        Perchance (free)
-      </a>
       <ModelPanel model={model} />
     </WidgetFrame>
   );
@@ -102,13 +94,27 @@ function StillsPanel() {
         : hasKey
           ? 'Type a prompt and tap Gen. Pictures come from OpenAI.'
           : 'Paste an OpenAI key above, or switch to Pollinations (free).'
-      : 'Type a prompt and tap Gen. Pictures load from Pollinations — no API key.';
+      : stillProvider === 'perchance'
+        ? 'Type a prompt and tap Gen. Perchance draws one picture into this gallery.'
+        : 'Type a prompt and tap Gen. Pictures load from Pollinations — no API key.';
 
   return (
     <>
       <StillProviderSwitch className="sticky top-0 z-10 -mx-3 mb-3 bg-[#0c1430] px-3 py-2" />
       {stillProvider === 'openai' ? (
         <OpenAiKeyFields />
+      ) : stillProvider === 'perchance' ? (
+        <p className="mb-2 text-[11px] leading-relaxed text-fuchsia-200/80">
+          Free · no API key. One image per Gen.
+          <a
+            href={PERCHANCE_PHOTO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="widget-no-drag ml-1 normal-case underline"
+          >
+            Open on Perchance.org
+          </a>
+        </p>
       ) : (
         <p className="mb-2 text-[11px] uppercase tracking-wider text-fuchsia-200/70">Free · no API key</p>
       )}
@@ -135,7 +141,13 @@ function StillsPanel() {
       {error ? (
         <p className="mb-3 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</p>
       ) : null}
-      {busy ? <p className="mb-2 text-xs text-white/50">Generating — first frames can take a few seconds.</p> : null}
+      {busy ? (
+        <p className="mb-2 text-xs text-white/50">
+          {stillProvider === 'perchance'
+            ? 'Perchance is drawing — this often takes about half a minute.'
+            : 'Generating — first frames can take a few seconds.'}
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-2">
         {images.map((img) => (
           <ImageTile key={img.id} img={img} />

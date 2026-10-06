@@ -16,6 +16,7 @@ const entries = [
   ['api/drive/files.ts', 'api/drive/files.func'],
   ['api/drive/files/[id].ts', 'api/drive/files/[id].func'],
   ['api/accounts.ts', 'api/accounts.func'],
+  ['api/perchance-image.ts', 'api/perchance-image.func'],
 ];
 
 for (const [entry, funcDir] of entries) {
@@ -30,6 +31,7 @@ for (const [entry, funcDir] of entries) {
     outfile,
     footer: { js: 'module.exports = module.exports.default || module.exports;\n' },
   });
+  const maxDuration = funcDir.includes('perchance-image') ? 90 : 30;
   writeFileSync(
     path.join(path.dirname(outfile), '.vc-config.json'),
     `${JSON.stringify({
@@ -37,13 +39,14 @@ for (const [entry, funcDir] of entries) {
       handler: 'index.js',
       launcherType: 'Nodejs',
       shouldAddHelpers: true,
-      maxDuration: 30,
+      maxDuration,
     }, null, 2)}\n`,
   );
 }
 
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
 const driveRoutes = [
+  { src: '^/api/perchance-image$', dest: '/api/perchance-image' },
   { src: '^/api/accounts$', dest: '/api/accounts' },
   { src: '^/api/drive/session$', dest: '/api/drive/session' },
   { src: '^/api/drive/files$', dest: '/api/drive/files' },
@@ -54,7 +57,7 @@ config.routes = [
   ...driveRoutes,
   ...routes.filter((route) => {
     const src = String(route.src || '');
-    return !src.includes('/api/drive') && !src.includes('/api/accounts');
+    return !src.includes('/api/drive') && !src.includes('/api/accounts') && !src.includes('/api/perchance-image');
   }),
 ];
 writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);

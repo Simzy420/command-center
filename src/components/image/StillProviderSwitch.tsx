@@ -6,7 +6,7 @@ export function StillProviderSwitch({ className }: { className?: string }) {
   const setStillProvider = useImageStore((s) => s.setStillProvider);
 
   return (
-    <div className={cn('grid grid-cols-2 gap-2', className)} role="group" aria-label="Still image provider">
+    <div className={cn('grid grid-cols-3 gap-2', className)} role="group" aria-label="Still image provider">
       <button
         type="button"
         aria-pressed={provider === 'pollinations'}
@@ -25,6 +25,17 @@ export function StillProviderSwitch({ className }: { className?: string }) {
         onClick={() => setStillProvider('openai')}
       >
         OpenAI
+      </button>
+      <button
+        type="button"
+        aria-pressed={provider === 'perchance'}
+        className={cn(
+          'hud-btn-ghost min-h-[48px] whitespace-normal px-2 text-center text-[11px] leading-tight',
+          provider === 'perchance' && 'hud-btn-primary',
+        )}
+        onClick={() => setStillProvider('perchance')}
+      >
+        Perchance
       </button>
     </div>
   );
