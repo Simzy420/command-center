@@ -12,6 +12,7 @@ interface ComputeData {
 }
 
 type Phase = 'loading' | 'live' | 'err';
+type RefreshLight = 'idle' | 'ok' | 'fail';
 
 /**
  * Fetches the agent's Virtuals compute balance from the API endpoint.
@@ -57,6 +58,7 @@ export function ComputeWidget({ widget }: WidgetRenderProps) {
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [light, setLight] = useState<RefreshLight>('idle');
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -65,9 +67,11 @@ export function ComputeWidget({ widget }: WidgetRenderProps) {
       const d = await fetchCompute();
       setData(d);
       setPhase('live');
+      setLight('ok');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load compute balance.');
       setPhase('err');
+      setLight('fail');
     } finally {
       setRefreshing(false);
     }
@@ -97,15 +101,35 @@ export function ComputeWidget({ widget }: WidgetRenderProps) {
               Virtuals Balance
             </span>
           </div>
-          <button
-            type="button"
-            className="widget-no-drag rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-white/70 hover:bg-white/10 disabled:opacity-40"
-            onClick={() => void refresh()}
-            disabled={refreshing}
-            aria-label="Refresh compute balance"
-          >
-            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-          </button>
+          <div className="flex items-center gap-2">
+            <span
+              role="status"
+              aria-live="polite"
+              data-refresh-light={light}
+              aria-label={
+                light === 'ok'
+                  ? 'Refresh succeeded'
+                  : light === 'fail'
+                    ? 'Refresh failed'
+                    : 'Refresh has not finished'
+              }
+              className={cn(
+                'h-2.5 w-2.5 shrink-0 rounded-full',
+                light === 'ok' && 'bg-emerald-400 shadow-[0_0_10px_#34d399]',
+                light === 'fail' && 'bg-rose-500 shadow-[0_0_10px_#fb7185]',
+                light === 'idle' && 'bg-white/25',
+              )}
+            />
+            <button
+              type="button"
+              className="widget-no-drag rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-white/70 hover:bg-white/10 disabled:opacity-40"
+              onClick={() => void refresh()}
+              disabled={refreshing}
+              aria-label="Refresh compute balance"
+            >
+              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+            </button>
+          </div>
         </div>
 
         {/* Error state */}
