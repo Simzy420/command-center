@@ -129,6 +129,7 @@ registerWidget({
   defaultSize: { w: 6, h: 8 },
   minSize: { w: 3, h: 5 },
   titleStyle: DRIVE_TITLE_STYLE,
+  privateApp: true,
   component: DriveWidget,
 });
 
@@ -140,6 +141,7 @@ registerWidget({
   defaultSize: { w: 12, h: 10 },
   minSize: { w: 4, h: 6 },
   titleStyle: GMAIL_TITLE_STYLE,
+  privateApp: true,
   component: GmailWidget,
 });
 

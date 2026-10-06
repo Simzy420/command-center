@@ -291,7 +291,7 @@ The artifact page could not be read from here. The HTML title is only “Claude 
 
 The **Google Drive** section is a separate board widget from Files. Open it from the **+** add-widget menu. The title stays “Google Drive”. It is locked to `caseylsims@gmail.com`. It lists the newest 25 files (folders and trash omitted), opens one to show its text, **Save** creates a text file or updates a text file already in Drive, and **Send** hands the open text to this phone’s share sheet (Messages, Mail, AirDrop) or downloads it when the browser has no share sheet. The on-device Files widget is unchanged.
 
-The rest of Command Center stays open. Only the Google Drive section asks for a password. Wrong or missing password gets no file list, no save, and no send. The phone never holds the password or a Google secret. It calls same-origin `/api/drive/*` on the Vercel site. The server checks `COMMAND_CENTER_PASSWORD` and only then talks to Google. GitHub Pages and the chat Space have no Drive server, so those hosts still show nothing from Drive.
+The rest of Command Center stays open. Only the Google Drive section asks for a password. Wrong or missing password gets no file list, no save, and no send. The phone never holds the password or a Google secret. Logging out or switching profiles clears the Drive session cookie, so the next profile does not inherit the unlock. It calls same-origin `/api/drive/*` on the Vercel site. The server checks `COMMAND_CENTER_PASSWORD` and only then talks to Google. GitHub Pages and the chat Space have no Drive server, so those hosts still show nothing from Drive.
 
 Drive on the Vercel site is the serverless route under `api/drive/`. It talks to the **Google Drive API v3** (`https://www.googleapis.com/drive/v3`) with OAuth scope `https://www.googleapis.com/auth/drive`. The narrower `drive.file` scope cannot see files this app did not create, so the route uses the full Drive scope. `npm run dev` serves the same route. `server/drive_api.py` is the optional loopback bridge and uses the same password check.
 
@@ -349,6 +349,12 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 
 **Send** hands the open file off the app. When the phone browser can share, it opens the system share sheet (Messages, Mail, AirDrop, and the other apps on that phone). When it cannot, the file downloads into that browser’s downloads. A video clip stored as a link is shared as that link; the clip bytes stay where the link points. There is no cloud file account and no secret.
 
+## Profiles
+
+System includes a **Profiles** section under AI Tools. Create a profile with a name and password, or log in. The password is hashed on this device. It is not sent to the server and it is not stored in plain text.
+
+Public apps in the **+** list (Files, Game, chat, and the rest) stay on the shared board. Google Drive and Gmail stay in that same list and are marked Private. Adding one while logged in puts that widget on the signed-in profile only. Adding one while logged out does nothing to the shared board. Saved credentials for those private apps are sealed to that profile. Another account on this device cannot read them.
+
 ## AI Tools
 
 The side menu is the drawer opened from the menu button at the top left, or from **System** on the dock. The first item is labeled **AI Tools**. Opening it lists ChatGPT, Base44, Cursor, Buffer, Linear, Replit, Perplexity, and Link. Each row uses that tool’s name and opens its site in a new tab. Link opens the App Store page.
@@ -360,13 +366,13 @@ The side menu is the drawer opened from the menu button at the top left, or from
 | Top bar (search stub, active bot, Use/Edit, Observe Only pill) | `src/components/shell/TopBar.tsx` |
 | Entity swarm + named avatars | `src/components/shell/EntitySwarm.tsx` |
 | JSON grid | `src/components/shell/GridBoard.tsx` |
-| Side drawer (AI Tools, boards, export/import, billing stub, image vault, chat bridge, flags) | `src/components/shell/SideDrawer.tsx` |
+| Side drawer (AI Tools, profiles, boards, export/import, billing stub, image vault, chat bridge, flags) | `src/components/shell/SideDrawer.tsx` |
 | Mobile dock | `src/components/shell/MobileDock.tsx` |
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
 
-Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, `game`, `drive`, plus the flagged `trading` empty stub. Gmail, Game, and Google Drive are in the add sheet without a feature flag. Google Drive is not seeded onto the starter boards. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
+Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, `game`, `drive`, plus the flagged `trading` empty stub. Gmail, Game, and Google Drive are in the add sheet without a feature flag. Gmail and Google Drive are private apps: the catalog stays shared, and each added instance belongs to the signed-in profile. Google Drive is not seeded onto the starter boards. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). File contents live in `files` on this device only. Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space.
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`, `profiles`. Guests keep in-memory edits only (the image vault, Chat API base, and profiles still save when you tap Save or create a profile). File contents live in `files` on this device only. Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space. The active profile id lives in `sessionStorage` as `cc.v1.profile.active`. Private-app credentials inside `profiles` are sealed; the Drive section password itself is not written there.

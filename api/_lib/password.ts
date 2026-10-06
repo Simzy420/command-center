@@ -53,18 +53,26 @@ export function readCookie(header: string | undefined, name = COOKIE_NAME): stri
   return '';
 }
 
-export function sessionCookie(token: string, host: string): string {
+function cookieParts(host: string, value: string, maxAge: number): string {
   const hostname = host.split(':')[0].replace(/^\[|\]$/g, '').toLowerCase();
   const secure = hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '::1';
   const parts = [
-    `${COOKIE_NAME}=${token}`,
+    `${COOKIE_NAME}=${value}`,
     'HttpOnly',
     'Path=/api/drive',
     'SameSite=Lax',
-    `Max-Age=${MAX_AGE_SECONDS}`,
+    `Max-Age=${maxAge}`,
   ];
   if (secure) parts.push('Secure');
   return parts.join('; ');
+}
+
+export function sessionCookie(token: string, host: string): string {
+  return cookieParts(host, token, MAX_AGE_SECONDS);
+}
+
+export function clearSessionCookie(host: string): string {
+  return cookieParts(host, '', 0);
 }
 
 const authHits = new Map<string, number[]>();

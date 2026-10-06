@@ -84,6 +84,21 @@ export async function loadDriveSession(hostname: string, signal?: AbortSignal): 
   await requestJson(hostname, '/api/drive/session', { signal, headers: { Accept: 'application/json' } });
 }
 
+export async function lockDriveSession(hostname: string): Promise<void> {
+  if (!driveRequestsAllowed(hostname)) return;
+  try {
+    await fetch('/api/drive/session', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lock: true }),
+    });
+  } catch {
+    /* Leaving a profile still drops the local session even if the lock request fails. */
+  }
+}
+
 export async function unlockDrive(hostname: string, password: string): Promise<void> {
   await requestJson(hostname, '/api/drive/session', {
     method: 'POST',

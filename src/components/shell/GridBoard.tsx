@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import GridLayout, { WidthProvider } from 'react-grid-layout';
 import { getWidget } from '@/registry';
 import { colsForWidth, isPhoneWidth, toGridLayout, type GridItem } from '@/lib/grid';
+import { isPrivateApp } from '@/profiles/privateApps';
 import { useLayoutStore } from '@/store/layoutStore';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import type { WidgetAnchor } from '@/types/layout';
 import 'react-grid-layout/css/styles.css';
@@ -18,7 +20,9 @@ export function GridBoard() {
   const search = useSessionStore((s) => s.search);
   const setAnchors = useSessionStore((s) => s.setAnchors);
   const widgets = useLayoutStore((s) => s.doc.widgets);
+  const privateWidgets = useProfileStore((s) => s.widgets);
   const setBoardWidgetsFromGrid = useLayoutStore((s) => s.setBoardWidgetsFromGrid);
+  const movePrivateWidgets = useProfileStore((s) => s.movePrivateWidgets);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -34,7 +38,8 @@ export function GridBoard() {
 
   const pageWidgets = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return widgets.filter((w) => {
+    const shared = widgets.filter((widget) => !isPrivateApp(widget.type));
+    return [...shared, ...privateWidgets].filter((w) => {
       if (w.page !== board) return false;
       if (!q) return true;
       const def = getWidget(w.type);
@@ -43,7 +48,7 @@ export function GridBoard() {
         (def?.title.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [widgets, board, search]);
+  }, [widgets, privateWidgets, board, search]);
 
   const layout = useMemo(() => toGridLayout(pageWidgets, cols), [pageWidgets, cols]);
 
@@ -77,6 +82,7 @@ export function GridBoard() {
   function onLayoutChange(next: GridItem[]) {
     if (mode !== 'edit' || search.trim()) return;
     setBoardWidgetsFromGrid(board, next, cols);
+    movePrivateWidgets(board, next, cols);
   }
 
   return (

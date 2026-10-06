@@ -1,7 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { GripVertical, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { isPrivateApp } from '@/profiles/privateApps';
 import { useLayoutStore } from '@/store/layoutStore';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import type { WidgetInstance } from '@/types/layout';
 
@@ -74,7 +76,8 @@ export function WidgetFrame({ widget, title, badge = 'LIVE', titleStyle, childre
             aria-label="Remove widget"
             onClick={(e) => {
               e.stopPropagation();
-              removeWidget(widget.id);
+              if (isPrivateApp(widget.type)) useProfileStore.getState().removePrivateWidget(widget.id);
+              else removeWidget(widget.id);
             }}
           >
             <X className="h-4 w-4" />

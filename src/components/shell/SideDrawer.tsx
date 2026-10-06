@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { AiToolsMenuButton, AiToolsPanel } from '@/components/shell/aiTools';
+import { ProfilesSection } from '@/components/shell/ProfilesSection';
 import { DEFAULT_BOARDS, type LayoutDocument } from '@/types/layout';
 import { cn } from '@/lib/cn';
 import { DEFAULT_CHAT_API_BASE, isChatBridgeConfigured, resolveChatApiBase } from '@/adapters/chat';
@@ -90,6 +91,8 @@ export function SideDrawer() {
         </div>
 
         <AiToolsMenuButton onOpen={() => setMenuView('tools')} />
+
+        <ProfilesSection />
 
         <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Boards</p>
         <div className="mb-5 grid grid-cols-2 gap-2">

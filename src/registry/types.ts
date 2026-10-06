@@ -19,5 +19,7 @@ export interface WidgetDefinition {
   titleStyle?: CSSProperties;
   /** Hide from add-sheet unless this flag is on */
   featureFlag?: keyof FeatureFlags;
+  /** Password-gated app. The + catalog lists it, but the instance belongs to the signed-in profile. */
+  privateApp?: boolean;
   component: ComponentType<WidgetRenderProps>;
 }
