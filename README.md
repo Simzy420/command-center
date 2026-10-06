@@ -355,7 +355,7 @@ The main page is Casey's owner board. Visitors can look at it without an account
 
 System includes a **Profiles** section under AI Tools. Anyone can create an account with a username and password, or log in. The password is sent only to this site's `/api/accounts` route. The server hashes it with scrypt and stores the hash, the session hashes, and that account's layout in a private Vercel Blob (`BLOB_READ_WRITE_TOKEN`). The password is not stored. The token is not in the app or a `VITE_` variable. The browser keeps an HttpOnly session cookie for 14 days. Logging in later returns the same layout JSON (`id`, `type`, `x`, `y`, `w`, `h`, `page`, `settings`). A new account starts empty. It does not reset to the starter and it does not write Casey's board.
 
-GitHub Pages has no account API, so that host stays on the view-only owner board. Local `npm run dev` stores the same server file under `.data/` (gitignored) so sign-in works without Blob. On Vercel, connect a private Blob store before accounts can be created.
+GitHub Pages has no account API, so that host stays on the view-only owner board. Local `npm run dev` stores the same server file under `.data/` (gitignored) so sign-in works without Blob. The Vercel project is connected to a private Blob store named `command-center-accounts`. `BLOB_READ_WRITE_TOKEN` is set on that project for production, preview, and development. It is not in the repo and it is not a `VITE_` variable. A deployment created after that connection can create accounts. If the token is missing, signup returns 503 and the owner board stays available.
 
 ## AI Tools
 
