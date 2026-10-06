@@ -3,6 +3,7 @@ import { ensureRobinhoodWidgets } from '@/data/ensureRobinhood';
 import { createStarterLayout } from '@/data/starterLayout';
 import { uid } from '@/lib/ids';
 import { fromGridLayout, type GridItem } from '@/lib/grid';
+import { isPrivateApp } from '@/profiles/privateApps';
 import { readJson, writeJson, writeJsonForced } from '@/store/persist';
 import type { BoardId, LayoutDocument, WidgetInstance } from '@/types/layout';
 
@@ -69,7 +70,8 @@ export const useLayoutStore = create<LayoutState>((set, get) => ({
     set({ doc: next });
   },
   addWidget: (page, type, opts) => {
-    const pageWidgets = get().doc.widgets.filter((w) => w.page === page);
+    if (isPrivateApp(type)) return;
+    const pageWidgets = get().doc.widgets.filter((w) => w.page === page && !isPrivateApp(w.type));
     const y = pageWidgets.reduce((m, w) => Math.max(m, w.y + w.h), 0);
     const widget: WidgetInstance = {
       id: uid('w'),

@@ -189,6 +189,22 @@ test('drive responses scrub a leaked secret', async () => {
   restoreEnv(saved);
 });
 
+test('locking a Drive session clears the cookie without a password', async () => {
+  const saved = saveEnv();
+  resetPasswordAttempts();
+  process.env.COMMAND_CENTER_PASSWORD = PASSWORD;
+  const unlocked = mockRes();
+  await handleDriveRequest(mockReq('POST', '/api/drive/session', { password: PASSWORD }), unlocked.res);
+  const cookie = unlocked.headers['set-cookie'].split(';', 1)[0];
+  const locked = mockRes();
+  await handleDriveRequest(mockReq('POST', '/api/drive/session', { lock: true }, cookie), locked.res);
+  assert.equal(locked.res.statusCode, 200);
+  assert.equal(locked.json().ok, true);
+  assert.match(locked.headers['set-cookie'], /Max-Age=0/);
+  assert.equal('files' in locked.json(), false);
+  restoreEnv(saved);
+});
+
 test('password compare and session token reject a mismatch', () => {
   process.env.COMMAND_CENTER_PASSWORD = PASSWORD;
   assert.equal(passwordsMatch(PASSWORD), true);

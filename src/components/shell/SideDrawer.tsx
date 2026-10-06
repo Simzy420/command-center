@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { AiToolsMenuButton, AiToolsPanel } from '@/components/shell/aiTools';
+import { ProfilesSection } from '@/components/shell/ProfilesSection';
 import { DEFAULT_BOARDS, type LayoutDocument } from '@/types/layout';
 import { cn } from '@/lib/cn';
 import { DEFAULT_CHAT_API_BASE, isChatBridgeConfigured, resolveChatApiBase } from '@/adapters/chat';
@@ -8,7 +9,8 @@ import { OpenAiKeyFields } from '@/components/image/OpenAiKeyFields';
 import { StillProviderSwitch } from '@/components/image/StillProviderSwitch';
 import { useChatStore } from '@/store/chatStore';
 import { useImageStore } from '@/store/imageStore';
-import { useLayoutStore } from '@/store/layoutStore';
+import { getOwnerBoard } from '@/profiles/ownerBoard';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { useVaultStore } from '@/store/vaultStore';
 
@@ -23,9 +25,10 @@ export function SideDrawer() {
   const setFlag = useSessionStore((s) => s.setFlag);
   const observeOnly = useSessionStore((s) => s.observeOnly);
   const setObserveOnly = useSessionStore((s) => s.setObserveOnly);
-  const exportDoc = useLayoutStore((s) => s.exportDoc);
-  const importDoc = useLayoutStore((s) => s.importDoc);
-  const resetStarter = useLayoutStore((s) => s.resetStarter);
+  const activeId = useProfileStore((s) => s.activeId);
+  const userLayout = useProfileStore((s) => s.layout);
+  const importLayout = useProfileStore((s) => s.importLayout);
+  const resetMyBoard = useProfileStore((s) => s.resetMyBoard);
   const hasKey = useVaultStore((s) => s.hasKey);
   const hint = useVaultStore((s) => s.hint);
   const chatApiBase = useVaultStore((s) => s.chatApiBase);
@@ -50,7 +53,8 @@ export function SideDrawer() {
         : 'Connected';
 
   function downloadLayout() {
-    const blob = new Blob([JSON.stringify(exportDoc(), null, 2)], { type: 'application/json' });
+    const doc = activeId && userLayout ? userLayout : getOwnerBoard();
+    const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -63,7 +67,7 @@ export function SideDrawer() {
     if (!file) return;
     const text = await file.text();
     const doc = JSON.parse(text) as LayoutDocument;
-    importDoc(doc);
+    importLayout(doc);
   }
 
   return (
@@ -91,6 +95,8 @@ export function SideDrawer() {
 
         <AiToolsMenuButton onOpen={() => setMenuView('tools')} />
 
+        <ProfilesSection />
+
         <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Boards</p>
         <div className="mb-5 grid grid-cols-2 gap-2">
           {DEFAULT_BOARDS.map((b) => (
@@ -110,7 +116,7 @@ export function SideDrawer() {
           <button type="button" className="hud-btn-primary" onClick={downloadLayout}>
             Export layout
           </button>
-          <button type="button" className="hud-btn-ghost" onClick={() => fileRef.current?.click()}>
+          <button type="button" className="hud-btn-ghost" disabled={!activeId} onClick={() => fileRef.current?.click()}>
             Import layout
           </button>
           <input
@@ -122,14 +128,20 @@ export function SideDrawer() {
           />
           <button
             type="button"
-            className="hud-btn-ghost text-amber-200"
+            className="hud-btn-ghost text-amber-200 disabled:opacity-40"
+            disabled={!activeId}
             onClick={() => {
-              resetStarter();
+              resetMyBoard();
               setBoard('home');
             }}
           >
-            Reset starter board
+            Reset my board
           </button>
+          {activeId ? null : (
+            <p className="text-xs leading-relaxed text-white/45">
+              Casey's board is view only. Sign in to import or reset your own board.
+            </p>
+          )}
         </div>
 
         <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">Billing stub</p>

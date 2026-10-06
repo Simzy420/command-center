@@ -11,6 +11,7 @@ import {
   secretValues,
   passwordAttemptBlocked,
   recordPasswordFailure,
+  clearSessionCookie,
   sessionCookie,
   tokenOk,
 } from './password.ts';
@@ -213,6 +214,10 @@ export async function handleDriveRequest(req: DriveRequest, res: DriveResponse, 
 
 async function unlock(req: DriveRequest, res: DriveResponse, nowMs: number): Promise<void> {
   const data = asRecord(await readBody(req));
+  if (data.lock === true) {
+    send(res, 200, { ok: true }, clearSessionCookie(hostName(req)));
+    return;
+  }
   rejectSecrets(data, true);
   if (!passwordConfigured()) {
     needsPassword(res, PASSWORD_UNSET_MESSAGE, 503);

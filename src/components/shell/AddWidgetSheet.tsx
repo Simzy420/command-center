@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { listWidgets } from '@/registry';
-import { useLayoutStore } from '@/store/layoutStore';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { X } from 'lucide-react';
 
@@ -8,7 +9,13 @@ export function AddWidgetSheet() {
   const setAddOpen = useSessionStore((s) => s.setAddOpen);
   const flags = useSessionStore((s) => s.flags);
   const board = useSessionStore((s) => s.board);
-  const addWidget = useLayoutStore((s) => s.addWidget);
+  const activeId = useProfileStore((s) => s.activeId);
+  const activeName = useProfileStore((s) => s.activeName);
+  const addWidget = useProfileStore((s) => s.addWidget);
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    if (!open) setNotice('');
+  }, [open]);
   if (!open) return null;
 
   return (
@@ -20,30 +27,49 @@ export function AddWidgetSheet() {
             <X className="h-5 w-5" />
           </button>
         </div>
+        {activeName ? (
+          <p className="mb-3 text-xs text-white/50">Adding to {activeName}. This board is saved on your profile.</p>
+        ) : (
+          <p className="mb-3 text-xs text-white/50">Casey's board is view only. Sign in to build your own.</p>
+        )}
+        {notice ? <p className="mb-3 text-xs text-rose-200">{notice}</p> : null}
         <ul className="grid grid-cols-1 gap-2">
           {listWidgets(flags).map((def) => (
             <li key={def.type}>
               <button
                 type="button"
+                data-add-widget={def.type}
+                data-private-app={def.privateApp ? 'true' : 'false'}
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:border-cyan-400/40"
                 onClick={() => {
-                  addWidget(board, def.type, {
+                  const size = {
                     w: def.defaultSize.w,
                     h: def.defaultSize.h,
                     settings: def.defaultSettings,
-                  });
+                  };
+                  if (!activeId) {
+                    setNotice('Sign in to add widgets to your own board.');
+                    return;
+                  }
+                  addWidget(board, def.type, size);
+                  setNotice('');
                   setAddOpen(false);
                 }}
               >
                 <p
                   className={
                     def.titleStyle
-                      ? 'text-lg text-white'
-                      : 'font-display text-sm uppercase tracking-widest text-white'
+                      ? 'flex items-center gap-2 text-lg text-white'
+                      : 'flex items-center gap-2 font-display text-sm uppercase tracking-widest text-white'
                   }
                   style={def.titleStyle}
                 >
                   {def.title}
+                  {def.privateApp ? (
+                    <span className="rounded-full border border-amber-300/40 px-2 py-0.5 font-sans text-[9px] font-bold uppercase tracking-widest text-amber-200">
+                      Private
+                    </span>
+                  ) : null}
                 </p>
                 <p className="text-xs text-white/50">{def.description}</p>
               </button>

@@ -291,7 +291,7 @@ The artifact page could not be read from here. The HTML title is only “Claude 
 
 The **Google Drive** section is a separate board widget from Files. Open it from the **+** add-widget menu. The title stays “Google Drive”. It is locked to `caseylsims@gmail.com`. It lists the newest 25 files (folders and trash omitted), opens one to show its text, **Save** creates a text file or updates a text file already in Drive, and **Send** hands the open text to this phone’s share sheet (Messages, Mail, AirDrop) or downloads it when the browser has no share sheet. The on-device Files widget is unchanged.
 
-The rest of Command Center stays open. Only the Google Drive section asks for a password. Wrong or missing password gets no file list, no save, and no send. The phone never holds the password or a Google secret. It calls same-origin `/api/drive/*` on the Vercel site. The server checks `COMMAND_CENTER_PASSWORD` and only then talks to Google. GitHub Pages and the chat Space have no Drive server, so those hosts still show nothing from Drive.
+The rest of Command Center stays open. Only the Google Drive section asks for a password. Wrong or missing password gets no file list, no save, and no send. The phone never holds the password or a Google secret. Logging out or switching profiles clears the Drive session cookie, so the next profile does not inherit the unlock. It calls same-origin `/api/drive/*` on the Vercel site. The server checks `COMMAND_CENTER_PASSWORD` and only then talks to Google. GitHub Pages and the chat Space have no Drive server, so those hosts still show nothing from Drive.
 
 Drive on the Vercel site is the serverless route under `api/drive/`. It talks to the **Google Drive API v3** (`https://www.googleapis.com/drive/v3`) with OAuth scope `https://www.googleapis.com/auth/drive`. The narrower `drive.file` scope cannot see files this app did not create, so the route uses the full Drive scope. `npm run dev` serves the same route. `server/drive_api.py` is the optional loopback bridge and uses the same password check.
 
@@ -349,6 +349,14 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 
 **Send** hands the open file off the app. When the phone browser can share, it opens the system share sheet (Messages, Mail, AirDrop, and the other apps on that phone). When it cannot, the file downloads into that browser’s downloads. A video clip stored as a link is shared as that link; the clip bytes stay where the link points. There is no cloud file account and no secret.
 
+## Profiles
+
+The main page is Casey's owner board. Visitors can look at it without an account. They cannot add, remove, rearrange, import, or reset it.
+
+System includes a **Profiles** section under AI Tools. Anyone can create an account with a username and password, or log in. The password is sent only to this site's `/api/accounts` route. The server hashes it with scrypt and stores the hash, the session hashes, and that account's layout in a private Vercel Blob (`BLOB_READ_WRITE_TOKEN`). The password is not stored. The token is not in the app or a `VITE_` variable. The browser keeps an HttpOnly session cookie for 14 days. Logging in later returns the same layout JSON (`id`, `type`, `x`, `y`, `w`, `h`, `page`, `settings`). A new account starts empty. It does not reset to the starter and it does not write Casey's board.
+
+GitHub Pages has no account API, so that host stays on the view-only owner board. Local `npm run dev` stores the same server file under `.data/` (gitignored) so sign-in works without Blob. The Vercel project is connected to a private Blob store named `command-center-accounts`. `BLOB_READ_WRITE_TOKEN` is set on that project for production, preview, and development. It is not in the repo and it is not a `VITE_` variable. A deployment created after that connection can create accounts. If the token is missing, signup returns 503 and the owner board stays available.
+
 ## AI Tools
 
 The side menu is the drawer opened from the menu button at the top left, or from **System** on the dock. The first item is labeled **AI Tools**. Opening it lists ChatGPT, Base44, Cursor, Buffer, Linear, Replit, Perplexity, and Link. Each row uses that tool’s name and opens its site in a new tab. Link opens the App Store page.
@@ -360,13 +368,13 @@ The side menu is the drawer opened from the menu button at the top left, or from
 | Top bar (search stub, active bot, Use/Edit, Observe Only pill) | `src/components/shell/TopBar.tsx` |
 | Entity swarm + named avatars | `src/components/shell/EntitySwarm.tsx` |
 | JSON grid | `src/components/shell/GridBoard.tsx` |
-| Side drawer (AI Tools, boards, export/import, billing stub, image vault, chat bridge, flags) | `src/components/shell/SideDrawer.tsx` |
+| Side drawer (AI Tools, profiles, boards, export/import, billing stub, image vault, chat bridge, flags) | `src/components/shell/SideDrawer.tsx` |
 | Mobile dock | `src/components/shell/MobileDock.tsx` |
 | Bot SVGs | `src/components/avatars/BotAvatar.tsx` |
 | Persistence gate | `src/store/persist.ts` + session `plan` |
 
-Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, `game`, `drive`, plus the flagged `trading` empty stub. Gmail, Game, and Google Drive are in the add sheet without a feature flag. Google Drive is not seeded onto the starter boards. The starter Home and Trading boards include Robinhood. A saved layout that predates it gains the widget once (`cc.v1.robinhoodBoardSeed`); removing it after that stays removed. System → reset starter also brings it back.
+Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robinhood`, `gmail`, `game`, `drive`, plus the flagged `trading` empty stub. Gmail, Game, and Google Drive are in the add sheet without a feature flag. The owner board visitors see is the shipped starter. A signed-in profile builds a separate board from that same list. Google Drive is not seeded onto the starter boards. The starter Home and Trading boards include Robinhood. A saved `cc.v1.layout` that predates Robinhood gains the widget once (`cc.v1.robinhoodBoardSeed`). Profile boards are stored apart from that key.
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). File contents live in `files` on this device only. Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space.
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). File contents live in `files` on this device only. Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space. Account boards and password hashes are not in `localStorage`. They live in the server account store. An older on-device `profiles` key is leftover from a previous draft and is not migrated; create the account again on the Vercel site. Signing in does not write `layout`. The Drive section password is not written into an account.

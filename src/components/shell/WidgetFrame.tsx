@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { GripVertical, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { useLayoutStore } from '@/store/layoutStore';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 import type { WidgetInstance } from '@/types/layout';
 
@@ -33,7 +33,7 @@ interface Props {
 export function WidgetFrame({ widget, title, badge = 'LIVE', titleStyle, children, footer }: Props) {
   const mode = useSessionStore((s) => s.mode);
   const setActiveWidget = useSessionStore((s) => s.setActiveWidget);
-  const removeWidget = useLayoutStore((s) => s.removeWidget);
+  const removeWidget = useProfileStore((s) => s.removeWidget);
   const accent = ACCENT[widget.type] ?? 'accent-cyan';
 
   return (

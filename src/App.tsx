@@ -6,11 +6,17 @@ import { MobileDock } from '@/components/shell/MobileDock';
 import { PreviewBanner } from '@/components/shell/PreviewBanner';
 import { SideDrawer } from '@/components/shell/SideDrawer';
 import { TopBar } from '@/components/shell/TopBar';
+import { useEffect } from 'react';
+import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 
 export default function App() {
   const mode = useSessionStore((s) => s.mode);
   const observeOnly = useSessionStore((s) => s.observeOnly);
+  const hydrate = useProfileStore((s) => s.hydrate);
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
 
   return (
     <div className="app-shell min-h-dvh">
