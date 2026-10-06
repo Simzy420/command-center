@@ -351,13 +351,11 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 
 ## Profiles
 
-The main page is Casey's owner board. Visitors can look at it. They cannot add, remove, rearrange, import, or reset it.
+The main page is Casey's owner board. Visitors can look at it without an account. They cannot add, remove, rearrange, import, or reset it.
 
-System includes a **Profiles** section under AI Tools. Anyone can create a profile with a name and password, or sign in. The password is hashed with PBKDF2 on this device. It is not sent to the server and it is not stored in plain text. GitHub Pages has no account database, so the hash and the saved board stay in this browser.
+System includes a **Profiles** section under AI Tools. Anyone can create an account with a username and password, or log in. The password is sent only to this site's `/api/accounts` route. The server hashes it with scrypt and stores the hash, the session hashes, and that account's layout in a private Vercel Blob (`BLOB_READ_WRITE_TOKEN`). The password is not stored. The token is not in the app or a `VITE_` variable. The browser keeps an HttpOnly session cookie for 14 days. Logging in later returns the same layout JSON (`id`, `type`, `x`, `y`, `w`, `h`, `page`, `settings`). A new account starts empty. It does not reset to the starter and it does not write Casey's board.
 
-After sign-in, the grid is that profile's board, starting empty. The **+** list is the same widget registry. Widgets they add, and the order they arrange them, are saved as layout JSON on that account (`version`, `boards`, `widgets` with `id`, `type`, `x`, `y`, `w`, `h`, `page`, `settings`). The next login restores that board. It does not reset to the starter, and it does not write Casey's board.
-
-Logging out shows the owner board again. Another account on this device has its own layout. Saved credentials for a private app, when one is saved, stay sealed to the profile that saved them.
+GitHub Pages has no account API, so that host stays on the view-only owner board. Local `npm run dev` stores the same server file under `.data/` (gitignored) so sign-in works without Blob. On Vercel, connect a private Blob store before accounts can be created.
 
 ## AI Tools
 
@@ -379,4 +377,4 @@ Built-in types: `chat`, `files`, `todo`, `links`, `imagegen`, `watchlist`, `robi
 
 ## Persistence keys
 
-All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`, `profiles`. Guests keep in-memory edits only (the image vault, Chat API base, and profiles still save when you tap Save or create a profile). File contents live in `files` on this device only. Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space. The active profile id lives in `sessionStorage` as `cc.v1.profile.active`. Each profile's board lives under `profiles` as layout JSON. The password is a hash. Private-app credentials inside `profiles` are sealed; the Drive section password itself is not written there. Signing in does not write `layout`.
+All keys are prefixed `cc.v1.` in `localStorage`: `layout`, `files`, `todos`, `links`, `watchlist`, `chat`, `chatSession`, `images`, `imageModel`, `imageProvider`, `videos`, `activity`, `session`, `vault.openai`, `vault.chatApiBase`, `robinhoodBoardSeed`. Guests keep in-memory edits only (the image vault and Chat API base still save when you tap Save). File contents live in `files` on this device only. Watchlist prices and the Robinhood snapshot are not stored — the phone only keeps the layout. The snapshot lives on the Space. Account boards and password hashes are not in `localStorage`. They live in the server account store. An older on-device `profiles` key is leftover from a previous draft and is not migrated; create the account again on the Vercel site. Signing in does not write `layout`. The Drive section password is not written into an account.

@@ -22,6 +22,7 @@ export function GridBoard() {
   const activeName = useProfileStore((s) => s.activeName);
   const userLayout = useProfileStore((s) => s.layout);
   const moveWidgets = useProfileStore((s) => s.moveWidgets);
+  const saveError = useProfileStore((s) => s.saveError);
   const signedIn = Boolean(activeId && userLayout);
   const widgets = activeId && userLayout ? userLayout.widgets : getOwnerBoard().widgets;
 
@@ -93,6 +94,7 @@ export function GridBoard() {
       <p className="px-2 pb-2 text-center text-[11px] uppercase tracking-[0.18em] text-white/40">
         {signedIn ? `Saved to ${activeName}` : "Casey's board · view only"}
       </p>
+      {saveError ? <p className="px-2 pb-2 text-center text-xs text-rose-200">{saveError}</p> : null}
       {pageWidgets.length === 0 ? (
         <p className="px-4 py-16 text-center text-white/45">
           {signedIn

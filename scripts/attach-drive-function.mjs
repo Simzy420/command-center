@@ -15,6 +15,7 @@ const entries = [
   ['api/drive/session.ts', 'api/drive/session.func'],
   ['api/drive/files.ts', 'api/drive/files.func'],
   ['api/drive/files/[id].ts', 'api/drive/files/[id].func'],
+  ['api/accounts.ts', 'api/accounts.func'],
 ];
 
 for (const [entry, funcDir] of entries) {
@@ -43,11 +44,18 @@ for (const [entry, funcDir] of entries) {
 
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
 const driveRoutes = [
+  { src: '^/api/accounts$', dest: '/api/accounts' },
   { src: '^/api/drive/session$', dest: '/api/drive/session' },
   { src: '^/api/drive/files$', dest: '/api/drive/files' },
   { src: '^/api/drive/files/(?<id>[A-Za-z0-9_-]+)$', dest: '/api/drive/files/[id]?id=$id' },
 ];
 const routes = Array.isArray(config.routes) ? config.routes : [];
-config.routes = [...driveRoutes, ...routes.filter((route) => !String(route.src || '').includes('/api/drive'))];
+config.routes = [
+  ...driveRoutes,
+  ...routes.filter((route) => {
+    const src = String(route.src || '');
+    return !src.includes('/api/drive') && !src.includes('/api/accounts');
+  }),
+];
 writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 console.log('Attached Google Drive functions to the Vercel build output.');

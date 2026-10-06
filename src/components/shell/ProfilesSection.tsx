@@ -63,9 +63,9 @@ export function ProfilesSection() {
             className="hud-input w-full"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Profile name"
+            placeholder="Username"
             autoComplete="username"
-            aria-label="Profile name"
+            aria-label="Username"
           />
           <input
             className="hud-input w-full"
@@ -77,14 +77,14 @@ export function ProfilesSection() {
             aria-label="Profile password"
           />
           <p className="text-xs leading-relaxed text-white/45">
-            Casey's board stays view only. Your password is hashed on this device and is not stored in plain text.
+            Casey's board stays view only. The password is hashed on the server and is not stored in plain text.
           </p>
           {error ? <p className="text-xs text-rose-200">{error}</p> : null}
           <button type="submit" className="hud-btn-primary w-full" disabled={busy}>
             Log in
           </button>
           <button type="button" className="hud-btn-ghost w-full" disabled={busy} onClick={() => void run('create')}>
-            Create profile
+            Create account
           </button>
         </form>
       )}

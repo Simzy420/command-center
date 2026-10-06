@@ -14,6 +14,41 @@ export default defineConfig({
   base: pagesBase,
   plugins: [
     {
+      name: 'accounts-api',
+      async configureServer(server) {
+        const { handleAccountsRequest } = await import('./api/_lib/accounts.ts');
+        server.middlewares.use((req, res, next) => {
+          if (!req.url?.startsWith('/api/accounts')) {
+            next();
+            return;
+          }
+          handleAccountsRequest(req, res).catch(() => {
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'Account request failed.' }));
+            }
+          });
+        });
+      },
+      async configurePreviewServer(server) {
+        const { handleAccountsRequest } = await import('./api/_lib/accounts.ts');
+        server.middlewares.use((req, res, next) => {
+          if (!req.url?.startsWith('/api/accounts')) {
+            next();
+            return;
+          }
+          handleAccountsRequest(req, res).catch(() => {
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'Account request failed.' }));
+            }
+          });
+        });
+      },
+    },
+    {
       name: 'drive-api',
       async configureServer(server) {
         const { handleDriveRequest } = await import('./api/_lib/handle.ts');
