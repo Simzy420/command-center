@@ -113,10 +113,10 @@ registerWidget({
 registerWidget({
   type: 'game',
   title: GAME_TITLE,
-  description: 'Opens the Claude artifact game in a new tab.',
+  description: 'Wheel Warrior. Plays right here, with a full-screen mode for phone.',
   icon: 'links',
-  defaultSize: { w: 6, h: 5 },
-  minSize: { w: 3, h: 3 },
+  defaultSize: { w: 12, h: 14 },
+  minSize: { w: 4, h: 8 },
   titleStyle: GAME_TITLE_STYLE,
   component: GameWidget,
 });
