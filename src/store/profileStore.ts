@@ -7,6 +7,7 @@ import {
   saveAccountLayout,
 } from '@/adapters/accounts/client';
 import { lockDriveSession } from '@/adapters/drive/client';
+import { withGalleryForOlderBoard } from '@/data/ensureGallery';
 import { createStarterLayout } from '@/data/starterLayout';
 import { uid } from '@/lib/ids';
 import { fromGridLayout, type GridItem } from '@/lib/grid';
@@ -63,7 +64,7 @@ function applySession(
   set({
     activeId: username || null,
     activeName: username,
-    layout: username ? layout : null,
+    layout: username && layout ? withGalleryForOlderBoard(layout, () => uid('w')) : null,
     saveError: '',
   });
 }

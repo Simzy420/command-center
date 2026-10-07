@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { ensureGalleryWidget } from '@/data/ensureGallery';
 import { ensureRobinhoodWidgets } from '@/data/ensureRobinhood';
 import { createStarterLayout } from '@/data/starterLayout';
 import { uid } from '@/lib/ids';
@@ -10,7 +9,6 @@ import type { BoardId, LayoutDocument, WidgetInstance } from '@/types/layout';
 
 const KEY = 'layout';
 const ROBINHOOD_SEED_KEY = 'robinhoodBoardSeed';
-const GALLERY_SEED_KEY = 'galleryBoardSeed';
 
 /** Guest layouts must not be written. Read the plan directly so this stays correct during module init. */
 function layoutWritesAllowed(): boolean {
@@ -18,22 +16,9 @@ function layoutWritesAllowed(): boolean {
   return session?.plan !== 'guest';
 }
 
-/** Saved boards predate the Photo gallery. Add it to Media once; a later removal sticks. */
-function seedGallery(base: LayoutDocument): LayoutDocument {
-  if (readJson<boolean>(GALLERY_SEED_KEY, false)) return base;
-  const seeded = ensureGalleryWidget(base, () => uid('w'));
-  if (!layoutWritesAllowed()) return seeded;
-  writeJsonForced(GALLERY_SEED_KEY, true);
-  if (seeded === base) return base;
-  const next = { ...seeded, updatedAt: Date.now() };
-  writeJsonForced(KEY, next);
-  return next;
-}
-
 function load(): LayoutDocument {
   const saved = readJson<LayoutDocument | null>(KEY, null);
-  const loaded = saved && saved.version === 1 && Array.isArray(saved.widgets) ? saved : createStarterLayout();
-  const base = seedGallery(loaded);
+  const base = saved && saved.version === 1 && Array.isArray(saved.widgets) ? saved : createStarterLayout();
   if (readJson<boolean>(ROBINHOOD_SEED_KEY, false)) return base;
   const seeded = ensureRobinhoodWidgets(base, () => uid('w'));
   if (!layoutWritesAllowed()) return seeded;
