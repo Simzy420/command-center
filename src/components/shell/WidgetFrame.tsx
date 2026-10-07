@@ -11,6 +11,7 @@ const ACCENT: Record<string, string> = {
   todo: 'accent-cyan',
   links: 'accent-cyan',
   imagegen: 'accent-mag',
+  gallery: 'accent-mag',
   watchlist: 'accent-gold',
   robinhood: 'accent-gold',
   compute: 'accent-gold',

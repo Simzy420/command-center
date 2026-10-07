@@ -18,7 +18,7 @@ const PREFERRED: Record<string, string[]> = {
   pulse: ['chat'],
   ledger: ['robinhood', 'files', 'todo'],
   shield: ['todo', 'watchlist'],
-  liquid98: ['imagegen'],
+  liquid98: ['imagegen', 'gallery'],
   chief: ['chat', 'links'],
 };
 

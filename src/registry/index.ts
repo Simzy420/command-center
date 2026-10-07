@@ -4,6 +4,7 @@ import { FilesWidget } from '@/components/widgets/FilesWidget';
 import { TodoWidget } from '@/components/widgets/TodoWidget';
 import { LinksWidget } from '@/components/widgets/LinksWidget';
 import { ImageGenWidget } from '@/components/widgets/ImageGenWidget';
+import { GalleryWidget } from '@/components/widgets/GalleryWidget';
 import { WatchlistWidget } from '@/components/widgets/WatchlistWidget';
 import { RobinhoodWidget } from '@/components/widgets/RobinhoodWidget';
 import { ComputeWidget } from '@/components/widgets/ComputeWidget';
@@ -78,6 +79,16 @@ registerWidget({
   defaultSize: { w: 6, h: 12 },
   minSize: { w: 3, h: 5 },
   component: ImageGenWidget,
+});
+
+registerWidget({
+  type: 'gallery',
+  title: 'Photo gallery',
+  description: 'Pick as many photos and videos as you want. Saved on this device.',
+  icon: 'image',
+  defaultSize: { w: 12, h: 10 },
+  minSize: { w: 3, h: 5 },
+  component: GalleryWidget,
 });
 
 registerWidget({

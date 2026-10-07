@@ -7,12 +7,14 @@ export type WidgetType =
   | 'todo'
   | 'links'
   | 'imagegen'
+  | 'gallery'
   | 'watchlist'
   | 'robinhood'
   | 'gmail'
   | 'game'
   | 'drive'
-  | 'trading';
+  | 'trading'
+  | 'compute';
 
 export interface WidgetInstance {
   id: string;
