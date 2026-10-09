@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { get, put } from '@vercel/blob';
-import { DEFAULT_BOARDS, type BoardId, type LayoutDocument, type WidgetInstance } from '../../src/types/layout.ts';
+import { DEFAULT_BOARDS, type BoardId, type LayoutDocument, type WidgetInstance } from '../../src/types/layout.js';
 
 type HeaderValue = string | string[] | undefined;
 

@@ -1,4 +1,4 @@
-import { DriveGatewayError, DriveInputError, GoogleDriveGateway, googleConfigured, type DriveGateway } from './driveClient.ts';
+import { DriveGatewayError, DriveInputError, GoogleDriveGateway, googleConfigured, type DriveGateway } from './driveClient.js';
 import {
   GOOGLE_UNSET_MESSAGE,
   PASSWORD_UNSET_MESSAGE,
@@ -14,7 +14,7 @@ import {
   clearSessionCookie,
   sessionCookie,
   tokenOk,
-} from './password.ts';
+} from './password.js';
 
 const FILE_ID = /^[A-Za-z0-9_-]{8,200}$/;
 const FORBIDDEN = new Set([

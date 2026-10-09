@@ -26,14 +26,16 @@ for (const [entry, funcDir] of entries) {
     bundle: true,
     platform: 'node',
     format: 'cjs',
-    target: 'node22',
+    target: 'node24',
     outfile,
-    footer: { js: 'module.exports = module.exports.default || module.exports;\n' },
+    footer: {
+      js: 'module.exports = typeof module.exports.default === "function" ? module.exports.default : module.exports;\n',
+    },
   });
   writeFileSync(
     path.join(path.dirname(outfile), '.vc-config.json'),
     `${JSON.stringify({
-      runtime: 'nodejs22.x',
+      runtime: 'nodejs24.x',
       handler: 'index.js',
       launcherType: 'Nodejs',
       shouldAddHelpers: true,

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DriveGatewayError, GoogleDriveGateway, type DriveGateway } from './driveClient.ts';
-import { handleDriveRequest, resetPasswordAttempts, type DriveRequest, type DriveResponse } from './handle.ts';
-import { passwordsMatch, tokenOk } from './password.ts';
+import { DriveGatewayError, GoogleDriveGateway, type DriveGateway } from './driveClient.js';
+import { handleDriveRequest, resetPasswordAttempts, type DriveRequest, type DriveResponse } from './handle.js';
+import { passwordsMatch, tokenOk } from './password.js';
 
 const PASSWORD = 'unit-test-drive-password';
 const SENTINEL = 'unit-test-drive-secret-value';

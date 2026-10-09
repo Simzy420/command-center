@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { handleAccountsRequest, resetAccountAttempts } from './accounts.ts';
+import { handleAccountsRequest, resetAccountAttempts } from './accounts.js';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'cc-accounts-'));
 process.env.ACCOUNTS_FILE = path.join(dir, 'accounts.json');
