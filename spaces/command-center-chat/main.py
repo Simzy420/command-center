@@ -366,29 +366,93 @@ def public_origin(request: Request) -> str:
     return host.rstrip("/")
 
 
+SYSTEM_PROMPTS = {
+    "chief": "You are the Chief of Staff for Casey Sims, a builder who runs construction (Sims Construction), crypto trading (Big Brain Ape), and AI automation. You manage a command center with bots: Scout, Sniper, Pulse, Ledger, Shield, Liquid98Bot, and Chief. Be concise, direct, and helpful. Casey uses voice dictation - keep replies short and actionable.",
+    "scout": "You are Scout, a reconnaissance bot in Casey's command center. You monitor markets and report opportunities. Be brief and data-driven.",
+    "sniper": "You are Sniper, a precision trading bot in Casey's command center. You focus on entry/exit timing. Be concise.",
+    "pulse": "You are Pulse, a monitoring bot in Casey's command center. You track system health and alerts. Be brief.",
+    "ledger": "You are Ledger, a financial tracking bot in Casey's command center. You manage accounting and reporting. Be concise.",
+    "shield": "You are Shield, a security bot in Casey's command center. You monitor threats and protect assets. Be brief.",
+    "liquid": "You are Liquid98Bot, a Hyperliquid trading bot in Casey's command center. You trade perpetual futures using the Druckenmiller framework. Be concise.",
+}
+
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen-2.5-72b-instruct")
+
+
 async def forward_webhook(payload: dict[str, Any]) -> None:
-    url_raw = (os.environ.get("GROK_WEBHOOK_URL") or "").strip()
-    if not url_raw:
-        raise HTTPException(503, "Space is missing GROK_WEBHOOK_URL.")
-    key = (os.environ.get("GROK_WEBHOOK_SENDER_KEY") or "").strip()
-    target = url_raw
-    if key:
-        parsed = urlparse(url_raw)
-        q = dict(parse_qsl(parsed.query, keep_blank_values=True))
-        if "key" not in q:
-            q["key"] = key
-            target = urlunparse(parsed._replace(query=urlencode(q)))
-    headers = {"Content-Type": "application/json"}
-    if key:
-        headers["Authorization"] = f"Bearer {key}"
-        headers["X-Webhook-Key"] = key
+    """Call OpenRouter directly instead of the broken Grok webhook."""
+    api_key = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
+    if not api_key:
+        raise HTTPException(503, "Space is missing OPENROUTER_API_KEY.")
+
+    session_id = payload["sessionId"]
+    client_msg_id = payload["clientMsgId"]
+    bot_id = (payload.get("botId") or "chief").strip() or "chief"
+    bot_name = payload.get("botName") or "Chief of Staff"
+    user_text = payload.get("text") or ""
+    history = payload.get("history") or []
+
+    system_prompt = SYSTEM_PROMPTS.get(bot_id, SYSTEM_PROMPTS["chief"])
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for msg in history:
+        role = msg.get("role")
+        if role in ("user", "assistant"):
+            messages.append({"role": role, "content": msg.get("text", "")})
+    messages.append({"role": "user", "content": user_text})
+
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            res = await client.post(target, headers=headers, json=payload)
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            res = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": OPENROUTER_MODEL,
+                    "messages": messages,
+                    "max_tokens": 1000,
+                    "temperature": 0.7,
+                },
+            )
     except httpx.HTTPError as exc:
-        raise HTTPException(502, f"Grok webhook failed: {exc}") from exc
+        await _post_reply(session_id, client_msg_id, bot_id, f"Connection error: {exc}", "error")
+        return
+
     if res.status_code >= 400:
-        raise HTTPException(502, f"Grok webhook HTTP {res.status_code}: {res.text[:200]}")
+        error_text = f"OpenRouter HTTP {res.status_code}: {res.text[:200]}"
+        await _post_reply(session_id, client_msg_id, bot_id, error_text, "error")
+        return
+
+    data = res.json()
+    reply_text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+    if not reply_text:
+        reply_text = f"{bot_name} has no response."
+
+    await _post_reply(session_id, client_msg_id, bot_id, reply_text, "final")
+
+
+async def _post_reply(session_id: str, client_msg_id: str, bot_id: str, text: str, status: str) -> None:
+    """Write reply directly into the session store (no HTTP callback needed)."""
+    existing = load_messages(session_id)
+    idx = next(
+        (i for i, m in enumerate(existing) if m.get("role") == "assistant" and m.get("clientMsgId") == client_msg_id),
+        -1,
+    )
+    if idx >= 0:
+        existing[idx] = {**existing[idx], "text": text, "status": status}
+    else:
+        existing.append({
+            "id": new_id("msg"),
+            "role": "assistant",
+            "botId": bot_id,
+            "text": text,
+            "clientMsgId": client_msg_id,
+            "createdAt": int(time.time() * 1000),
+            "status": status,
+        })
+    save_messages(session_id, existing)
 
 
 @app.get("/")
