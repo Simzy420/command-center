@@ -124,7 +124,7 @@ registerWidget({
 registerWidget({
   type: 'game',
   title: GAME_TITLE,
-  description: 'Opens the Claude artifact game in a new tab.',
+  description: 'Wheel Warrior game. Opens in a new tab on Claude.',
   icon: 'links',
   defaultSize: { w: 6, h: 5 },
   minSize: { w: 3, h: 3 },
