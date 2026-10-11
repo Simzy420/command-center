@@ -99,6 +99,10 @@ test('Google Drive is a normal widget and Files still saves on this device', () 
   const files = readFileSync('src/components/widgets/FilesWidget.tsx', 'utf8');
   assert.match(files, /Saved on this device\. Nothing was uploaded\./);
   assert.match(files, /handOffFile/);
+  assert.match(files, /Open downloads/);
+  assert.match(files, /openDeviceDownloads/);
+  assert.match(files, /Open File/);
+  assert.match(files, /readLocalTextFiles/);
   const space = readFileSync('spaces/command-center-chat/main.py', 'utf8');
   assert.equal(space.includes('/api/drive'), false);
   assert.equal(space.includes('GOOGLE_DRIVE_CLIENT_SECRET'), false);

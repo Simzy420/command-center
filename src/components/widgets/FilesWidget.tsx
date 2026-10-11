@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FileText, Folder, FolderOpen } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { Download, FileText, Folder, FolderOpen, FolderUp } from 'lucide-react';
+import { openDeviceDownloads, openExternalUrl } from '@/adapters/files/openDownloads';
+import { readLocalTextFiles } from '@/adapters/files/openLocal';
 import { handOffFile } from '@/adapters/files/send';
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import { isPersistEnabled } from '@/store/persist';
@@ -30,6 +32,8 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
   const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const openInputId = useId();
 
   useEffect(() => {
     const folder = widget.settings?.folder;
@@ -96,6 +100,36 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
     }
   }
 
+  function onOpenDownloads() {
+    const result = openDeviceDownloads({
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      openUrl: openExternalUrl,
+    });
+    setNotice(result.message);
+  }
+
+  async function onOpenDeviceFiles(files: FileList | null) {
+    setOpening(true);
+    setNotice(null);
+    try {
+      const result = await readLocalTextFiles(files);
+      let firstId: string | null = null;
+      for (const file of result.opened) {
+        const id = addFile(currentFolderId, file.name, file.content);
+        if (id && !firstId) firstId = id;
+      }
+      if (firstId) {
+        const created = useFilesStore.getState().nodes.find((node) => node.id === firstId);
+        if (created) openFile(created);
+      }
+      setNotice(result.message);
+    } finally {
+      setOpening(false);
+      const input = document.getElementById(openInputId);
+      if (input instanceof HTMLInputElement) input.value = '';
+    }
+  }
+
   return (
     <WidgetFrame widget={widget} title="Files">
       {opened ? (
@@ -112,9 +146,41 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
           }}
           onSave={onSave}
           onSend={() => void onSend()}
+          onOpenDownloads={onOpenDownloads}
         />
       ) : (
         <>
+          <div className="mb-3 flex flex-col gap-2">
+            <button
+              type="button"
+              className="hud-btn-primary widget-no-drag flex min-h-[48px] w-full items-center justify-center gap-2"
+              onClick={onOpenDownloads}
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              Open downloads
+            </button>
+            <label
+              htmlFor={openInputId}
+              className={`hud-btn-ghost widget-no-drag flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 ${opening ? 'pointer-events-none opacity-60' : ''}`}
+            >
+              <FolderUp className="h-4 w-4" aria-hidden />
+              {opening ? 'Opening…' : 'Open File'}
+            </label>
+            <input
+              id={openInputId}
+              type="file"
+              multiple
+              className="sr-only"
+              aria-label="Open downloaded files"
+              disabled={opening}
+              onChange={(event) => void onOpenDeviceFiles(event.target.files)}
+            />
+          </div>
+          {notice ? (
+            <p className="mb-2 text-sm leading-relaxed text-cyan-100/90" role="status">
+              {notice}
+            </p>
+          ) : null}
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -199,7 +265,7 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
             </button>
           </form>
           <p className="mt-3 text-[11px] leading-relaxed text-white/40">
-            Files stay in this browser. They are not stored on GitHub Pages or Vercel.
+            Open downloads jumps to this phone’s Files app Downloads folder. Open File imports text from that picker into this folder. Images and videos stay in Photo gallery. Notes stay in this browser — nothing is uploaded to GitHub Pages or Vercel.
           </p>
         </>
       )}
@@ -217,6 +283,7 @@ function FileEditor({
   onBack,
   onSave,
   onSend,
+  onOpenDownloads,
 }: {
   file: FileNode;
   draft: string;
@@ -227,6 +294,7 @@ function FileEditor({
   onBack: () => void;
   onSave: () => void;
   onSend: () => void;
+  onOpenDownloads: () => void;
 }) {
   return (
     <div>
@@ -257,9 +325,17 @@ function FileEditor({
           {sending ? 'Sending…' : 'Send'}
         </button>
       </div>
+      <button
+        type="button"
+        className="hud-btn-ghost widget-no-drag mt-2 flex min-h-[48px] w-full items-center justify-center gap-2"
+        onClick={onOpenDownloads}
+      >
+        <Download className="h-4 w-4" aria-hidden />
+        Open downloads
+      </button>
       {notice ? <p className="mt-2 text-sm leading-relaxed text-cyan-100/90">{notice}</p> : null}
       <p className="mt-2 text-[11px] leading-relaxed text-white/40">
-        Send uses this phone’s share sheet when the browser allows it. Otherwise the file downloads in this browser. It is not uploaded to the public site.
+        Send uses this phone’s share sheet when the browser allows it. Otherwise the file downloads in this browser. Open downloads takes you to that Downloads folder in the Files app. Nothing is uploaded to the public site.
       </p>
     </div>
   );

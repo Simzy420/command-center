@@ -1,2 +1,2 @@
-/** Public Swapr app. Runpod stays behind that host. */
-export const SWAPR_APP_URL = 'https://swapr-casey.netlify.app/';
+/** Public Swapr app (Add template + Generate on Runpod). */
+export const SWAPR_APP_URL = 'https://wan22-templates.vercel.app/';
