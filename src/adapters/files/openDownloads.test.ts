@@ -15,6 +15,10 @@ test('platform detection covers phone and desktop user agents', () => {
   assert.equal(detectDownloadsPlatform('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)'), 'ios');
   assert.equal(detectDownloadsPlatform('Mozilla/5.0 (Linux; Android 14; Pixel 8)'), 'android');
   assert.equal(detectDownloadsPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)'), 'other');
+  assert.equal(
+    detectDownloadsPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15', 5),
+    'ios',
+  );
 });
 
 test('iOS opens iCloud Downloads then the Files app root', () => {

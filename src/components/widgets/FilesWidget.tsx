@@ -103,6 +103,7 @@ export function FilesWidget({ widget }: WidgetRenderProps) {
   function onOpenDownloads() {
     const result = openDeviceDownloads({
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      maxTouchPoints: typeof navigator !== 'undefined' ? navigator.maxTouchPoints : 0,
       openUrl: openExternalUrl,
     });
     setNotice(result.message);

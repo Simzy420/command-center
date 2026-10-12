@@ -11,8 +11,10 @@ export const IOS_FILES_APP_URL = 'shareddocuments://';
 export const ANDROID_DOWNLOADS_URL =
   'content://com.android.externalstorage.documents/document/primary%3ADownload';
 
-export function detectDownloadsPlatform(ua: string): DownloadsPlatform {
+export function detectDownloadsPlatform(ua: string, maxTouchPoints = 0): DownloadsPlatform {
   if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+  // iPadOS Safari identifies as Macintosh. A touch screen distinguishes it from a desktop Mac.
+  if (/Macintosh/i.test(ua) && maxTouchPoints > 1) return 'ios';
   if (/Android/i.test(ua)) return 'android';
   return 'other';
 }
@@ -45,9 +47,10 @@ export function downloadsOpenMessage(platform: DownloadsPlatform, opened: boolea
  */
 export function openDeviceDownloads(opts: {
   userAgent: string;
+  maxTouchPoints?: number;
   openUrl: (url: string) => boolean;
 }): { opened: boolean; message: string } {
-  const platform = detectDownloadsPlatform(opts.userAgent);
+  const platform = detectDownloadsPlatform(opts.userAgent, opts.maxTouchPoints ?? 0);
   const targets = downloadsOpenTargets(platform);
   if (targets.length === 0) {
     return { opened: false, message: downloadsOpenMessage(platform, false) };
