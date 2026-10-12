@@ -1,4 +1,4 @@
-import type { LayoutDocument } from '../../src/types/layout.ts';
+import { DEFAULT_BOARDS, type LayoutDocument } from '../../src/types/layout.ts';
 
 export const ACCOUNTS_UNAVAILABLE =
   "Sign-in is available on the Vercel site. This page stays on Casey's board.";
@@ -186,7 +186,7 @@ async function saveUserLayout(userId: string, layout: LayoutDocument): Promise<v
 }
 
 function emptyLayout(now = Date.now()): LayoutDocument {
-  return { version: 1, boards: [{ id: 'home', name: 'Home' }, { id: 'trading', name: 'Trading' }, { id: 'media', name: 'Media' }, { id: 'links', name: 'Links' }], widgets: [], updatedAt: now };
+  return { version: 1, boards: DEFAULT_BOARDS.map((board) => ({ ...board })), widgets: [], updatedAt: now };
 }
 
 export async function handleAccountsRequest(req: AccountRequest, res: AccountResponse, _nowMs = Date.now()): Promise<void> {

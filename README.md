@@ -125,7 +125,7 @@ Optional override: `VITE_MARKET_API_BASE` — a root that serves the same `/simp
 
 Image gen has a **Stills | Wan 2.2 | Wan Extend | Swapr** switch (saved as `cc.v1.imageModel`: `stills`, `wan22`, `wanExtend`, or `swapr`). On a phone the four choices sit in a 2×2 grid. **Perchance (free)** sits under that switch and opens [perchance.org/ai-photo-generator](https://perchance.org/ai-photo-generator) in a new tab. It does not replace those generators. Stills have a **Pollinations (free) | OpenAI** switch (saved as `cc.v1.imageProvider`). Wan 2.2 calls the public Gradio Space [kulkas2pintu/wan222](https://huggingface.co/spaces/kulkas2pintu/wan222) from the browser — no Hugging Face token. ZeroGPU often takes 1–3 minutes. If the host blocks CORS, the widget embeds the Space (`?embed=true`) and links **Open in Space**. Generated clips are stored in `cc.v1.videos` and copied into the Files **Media** folder.
 
-**Wan Extend** opens the Runpod-backed Space [simzy-wan22-extend](https://simzy-wan22-extend.hf.space/) in a new tab and embeds it when the Space allows framing. **Swapr** opens [swapr-casey.netlify.app](https://swapr-casey.netlify.app/) the same way (Become the Character / Wan Animate on Runpod). The phone does not call Runpod. The first run can take a few minutes while the Runpod worker starts.
+**Wan Extend** opens the Runpod-backed Space [simzy-wan22-extend](https://simzy-wan22-extend.hf.space/) in a new tab and embeds it when the Space allows framing. **Swapr** opens [wan22-templates.vercel.app](https://wan22-templates.vercel.app/) the same way (Become the Character / Wan Animate on Runpod). The phone does not call Runpod. The first run can take a few minutes while the Runpod worker starts.
 
 ### Real chat (Chief of Staff)
 
@@ -345,9 +345,11 @@ npm run dev
 
 ## Files
 
-The Files widget on Home is the file section. Tap a file to open it and read the contents. **Save** writes the text back into that file (or creates one from **File** after you name it, then Save). Notes stay in this browser’s `cc.v1.files` storage. They are not uploaded to GitHub Pages, Vercel, or the chat Space, so a stranger on the public site cannot read them.
+The Files widget on Home is the file section. Tap a file to open it and read the contents. **Open File** brings up this phone’s Downloads / Files picker so you can pull text downloads back into the current folder; the first pick opens for reading. **Save** writes the text back into that file (or creates one from **File** after you name it, then Save). Notes stay in this browser’s `cc.v1.files` storage. They are not uploaded to GitHub Pages, Vercel, or the chat Space, so a stranger on the public site cannot read them. Images and videos belong in Photo gallery, not Open File.
 
 **Send** hands the open file off the app. When the phone browser can share, it opens the system share sheet (Messages, Mail, AirDrop, and the other apps on that phone). When it cannot, the file downloads into that browser’s downloads. A video clip stored as a link is shared as that link; the clip bytes stay where the link points. There is no cloud file account and no secret.
+
+**Open downloads** jumps out to this phone’s Files app Downloads folder (iCloud Downloads on iPhone/iPad, the Download folder on Android) so you can see everything Send already saved there. On a computer it tells you to use the browser’s downloads instead.
 
 ## Profiles
 

@@ -17,7 +17,7 @@ test('a cross-origin frame counts as accepted', () => {
   assert.equal(embedFrameAccepted({ contentDocument: null, contentWindow: {} }), true);
   assert.equal(
     embedFrameAccepted({
-      contentDocument: { location: { href: 'https://swapr-casey.netlify.app/' } },
+      contentDocument: { location: { href: 'https://wan22-templates.vercel.app/' } },
       contentWindow: {},
     }),
     true,
