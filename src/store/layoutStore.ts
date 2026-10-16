@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ensureRobinhoodWidgets } from '@/data/ensureRobinhood';
+import { ensureWheelWarriorWidget } from '@/data/ensureWheelWarrior';
 import { createStarterLayout } from '@/data/starterLayout';
 import { uid } from '@/lib/ids';
 import { fromGridLayout, type GridItem } from '@/lib/grid';
@@ -9,6 +10,7 @@ import type { BoardId, LayoutDocument, WidgetInstance } from '@/types/layout';
 
 const KEY = 'layout';
 const ROBINHOOD_SEED_KEY = 'robinhoodBoardSeed';
+const GAME_SEED_KEY = 'gameBoardSeed';
 
 /** Guest layouts must not be written. Read the plan directly so this stays correct during module init. */
 function layoutWritesAllowed(): boolean {
@@ -17,6 +19,22 @@ function layoutWritesAllowed(): boolean {
 }
 
 function load(): LayoutDocument {
+  return seedGame(loadBase());
+}
+
+/** One-time: put the game at the top of Media if no board has it. Removing it later sticks. */
+function seedGame(base: LayoutDocument): LayoutDocument {
+  if (readJson<boolean>(GAME_SEED_KEY, false)) return base;
+  const seeded = ensureWheelWarriorWidget(base, () => uid('w'));
+  if (!layoutWritesAllowed()) return seeded;
+  writeJsonForced(GAME_SEED_KEY, true);
+  if (seeded === base) return base;
+  const next = { ...seeded, updatedAt: Date.now() };
+  writeJsonForced(KEY, next);
+  return next;
+}
+
+function loadBase(): LayoutDocument {
   const saved = readJson<LayoutDocument | null>(KEY, null);
   const base = saved && saved.version === 1 && Array.isArray(saved.widgets) ? saved : createStarterLayout();
   if (readJson<boolean>(ROBINHOOD_SEED_KEY, false)) return base;
