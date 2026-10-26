@@ -15,7 +15,11 @@ npm run preview  # serve dist
 
 Install as a PWA from Safari/Chrome on iPhone or iPad (Add to Home Screen). The service worker caches the app shell so the last saved layout still opens offline (layout JSON is in `localStorage`).
 
-Live (GitHub Pages): https://simzy420.github.io/command-center/
+Live backup (Vercel, untouched): https://command-center-neon-iota.vercel.app/
+
+Supabase login clone (GitHub Pages): https://simzy420.github.io/command-center-supabase/
+
+View-only Pages copy: https://simzy420.github.io/command-center/
 
 ## Product rules (v1)
 
@@ -293,7 +297,7 @@ The **Google Drive** section is a separate board widget from Files. Open it from
 
 The rest of Command Center stays open. Only the Google Drive section asks for a password. Wrong or missing password gets no file list, no save, and no send. The phone never holds the password or a Google secret. Logging out or switching profiles clears the Drive session cookie, so the next profile does not inherit the unlock. It calls same-origin `/api/drive/*` on the Vercel site. The server checks `COMMAND_CENTER_PASSWORD` and only then talks to Google. GitHub Pages and the chat Space have no Drive server, so those hosts still show nothing from Drive.
 
-Drive on the Vercel site is the serverless route under `api/drive/`. It talks to the **Google Drive API v3** (`https://www.googleapis.com/drive/v3`) with OAuth scope `https://www.googleapis.com/auth/drive`. The narrower `drive.file` scope cannot see files this app did not create, so the route uses the full Drive scope. `npm run dev` serves the same route. `server/drive_api.py` is the optional loopback bridge and uses the same password check.
+Drive on the Vercel site is the serverless route under `serverless-src/drive/` (served at `/api/drive/*`). It talks to the **Google Drive API v3** (`https://www.googleapis.com/drive/v3`) with OAuth scope `https://www.googleapis.com/auth/drive`. The narrower `drive.file` scope cannot see files this app did not create, so the route uses the full Drive scope. `npm run dev` serves the same route. `server/drive_api.py` is the optional loopback bridge and uses the same password check.
 
 | Secret | Where it lives |
 | --- | --- |
@@ -355,9 +359,11 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 
 The main page is Casey's owner board. Visitors can look at it without an account. They cannot add, remove, rearrange, import, or reset it.
 
-System includes a **Profiles** section under AI Tools. Anyone can create an account with a username and password, or log in. The password is sent only to this site's `/api/accounts` route. The server hashes it with scrypt and stores the hash, the session hashes, and that account's layout in a private Vercel Blob (`BLOB_READ_WRITE_TOKEN`). The password is not stored. The token is not in the app or a `VITE_` variable. The browser keeps an HttpOnly session cookie for 14 days. Logging in later returns the same layout JSON (`id`, `type`, `x`, `y`, `w`, `h`, `page`, `settings`). A new account starts empty. It does not reset to the starter and it does not write Casey's board.
+System includes a **Profiles** section. The Supabase clone signs in with email and password through Supabase Auth in the browser. Sign-up and sign-in accept only `caseylsims@gmail.com`. Supabase sends a confirmation email; open that link, then log in with the same password. The password is not stored in the app or in git. The public publishable key is the only Supabase key in the client. There is no service-role key and no `BLOB_READ_WRITE_TOKEN` in the client.
 
-GitHub Pages has no account API, so that host stays on the view-only owner board. Local `npm run dev` stores the same server file under `.data/` (gitignored) so sign-in works without Blob. The Vercel project is connected to a private Blob store named `command-center-accounts`. `BLOB_READ_WRITE_TOKEN` is set on that project for production, preview, and development. It is not in the repo and it is not a `VITE_` variable. A deployment created after that connection can create accounts. If the token is missing, signup returns 503 and the owner board stays available.
+A signed-in board is saved to the `command_center_layouts` table when that table exists (see `supabase/command_center_auth.sql`, row level security on, owner email only). Until that SQL is applied, the same board JSON is saved on the Auth user as private metadata. A new account starts empty. It does not reset to the starter and it does not write Casey's board.
+
+The Vercel project and its private Blob store `command-center-accounts` are left in place. That store was suspended for free-plan limits, so the Vercel site cannot read the old accounts. This clone does not call Vercel Blob or Vercel functions for login. Drive and the optional OpenAI stills proxy still need their own server; on the Pages clone they stay closed and the rest of the board works.
 
 ## AI Tools
 
