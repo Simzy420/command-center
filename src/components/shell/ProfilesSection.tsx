@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AccountNotice } from '@/adapters/accounts/client';
+import { AccountNotice, requestPasswordReset } from '@/adapters/accounts/client';
 import { OWNER_EMAIL } from '@/adapters/accounts/allowlist';
 import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -17,11 +17,16 @@ export function ProfilesSection() {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
-  async function run(action: 'create' | 'login') {
+  async function run(action: 'create' | 'login' | 'reset') {
     setBusy(true);
     setError('');
     setNotice('');
     try {
+      if (action === 'reset') {
+        await requestPasswordReset(name);
+        setNotice(`Reset link sent to ${name.trim()}. Open it, then log in here with the new password.`);
+        return;
+      }
       if (action === 'create') await createAccount(name, password);
       else await login(name, password);
       setName('');
@@ -84,8 +89,8 @@ export function ProfilesSection() {
             aria-label="Profile password"
           />
           <p className="text-xs leading-relaxed text-white/45">
-            Casey's board stays view only. Sign-up is only open for {OWNER_EMAIL}. Supabase emails a confirmation
-            link; after you open it, log in here. The password stays in Supabase Auth.
+            Casey's board stays view only until you sign in. Use {OWNER_EMAIL} and the password already on this
+            Supabase account. Forgot it? Email a reset link, open it, then log in here.
           </p>
           {notice ? (
             <p className="text-xs text-amber-100" data-profile-notice>
@@ -98,6 +103,9 @@ export function ProfilesSection() {
           </button>
           <button type="button" className="hud-btn-ghost w-full" disabled={busy} onClick={() => void run('create')}>
             Create account
+          </button>
+          <button type="button" className="hud-btn-ghost w-full" disabled={busy} onClick={() => void run('reset')}>
+            Email a reset link
           </button>
         </form>
       )}

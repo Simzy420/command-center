@@ -1,6 +1,8 @@
 -- Command Center accounts on Supabase.
--- Apply with the database owner (SQL editor or psql). The browser only has the publishable key.
--- This does not drop or rewrite existing tables.
+-- The browser uses project inlqueorerrsmfnaryzj, where caseylsims@gmail.com is already confirmed.
+-- The layouts table and owner policies are applied there. Do not add the signup trigger on that
+-- project: it has other accounts. The trigger below is only for a dedicated Auth project.
+-- It is already installed on sroxpbgdojsleyojzcna. This does not drop or rewrite existing tables.
 
 create table if not exists public.command_center_layouts (
   user_id uuid primary key references auth.users (id) on delete cascade,

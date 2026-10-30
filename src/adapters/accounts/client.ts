@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import type { LayoutDocument } from '@/types/layout';
+import { createStarterLayout } from '@/data/starterLayout';
 import { DEFAULT_BOARDS } from '@/types/layout';
 import { assertOwnerEmail, assertPassword, normalizeEmail, OWNER_EMAIL } from '@/adapters/accounts/allowlist';
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '@/adapters/accounts/publicConfig';
@@ -68,7 +69,7 @@ async function readLayout(user: User): Promise<LayoutDocument> {
     .eq('user_id', user.id)
     .maybeSingle();
   if (!stored.error) {
-    return layoutFrom(stored.data?.layout) ?? emptyLayout();
+    return layoutFrom(stored.data?.layout) ?? createStarterLayout();
   }
   if (!tableMissing(stored.error)) {
     const meta = layoutFrom(user.user_metadata?.[META_KEY]);
@@ -101,7 +102,7 @@ function authMessage(message: string, code?: string): Error {
     return new Error('Wrong email or password.');
   }
   if (/already registered|already been registered/i.test(message)) {
-    return new Error('That email is already registered. Confirm it, then log in.');
+    return new Error('That email is already registered. Log in with its password, or email a reset link.');
   }
   return new Error(message || 'Could not open that profile.');
 }
@@ -157,6 +158,12 @@ export async function registerAccount(username: string, password: string): Promi
     );
   }
   return sessionFor(data.user);
+}
+
+export async function requestPasswordReset(username: string): Promise<void> {
+  const email = assertOwnerEmail(username);
+  const { error } = await supabase().auth.resetPasswordForEmail(email, { redirectTo: redirectTo() });
+  if (error) throw authMessage(error.message, error.code);
 }
 
 export async function loginAccount(username: string, password: string): Promise<AccountSession> {

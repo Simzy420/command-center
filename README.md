@@ -359,9 +359,9 @@ The Files widget on Home is the file section. Tap a file to open it and read the
 
 The main page is Casey's owner board. Visitors can look at it without an account. They cannot add, remove, rearrange, import, or reset it.
 
-System includes a **Profiles** section. The Supabase clone signs in with email and password through Supabase Auth in the browser. Sign-up and sign-in accept only `caseylsims@gmail.com`. Supabase sends a confirmation email; open that link, then log in with the same password. The password is not stored in the app or in git. The public publishable key is the only Supabase key in the client. There is no service-role key and no `BLOB_READ_WRITE_TOKEN` in the client.
+System includes a **Profiles** section. The Pages app signs in with email and password through Supabase Auth in the browser, on the Big Brain Ape project where `caseylsims@gmail.com` is already confirmed. Sign-up and sign-in accept only that email. Log in with the existing password, or use **Email a reset link**. The password is not stored in the app or in git. The public publishable key is the only Supabase key in the client. There is no service-role key and no `BLOB_READ_WRITE_TOKEN` in the client.
 
-A signed-in board is saved to the `command_center_layouts` table when that table exists (see `supabase/command_center_auth.sql`, row level security on, owner email only). Until that SQL is applied, the same board JSON is saved on the Auth user as private metadata. A new account starts empty. It does not reset to the starter and it does not write Casey's board.
+A signed-in board is saved to `command_center_layouts` (row level security, owner email only). The first sign-in starts from the same starter board and is saved after a change. It does not write the visitor copy of Casey's board.
 
 The Vercel project and its private Blob store `command-center-accounts` are left in place. That store was suspended for free-plan limits, so the Vercel site cannot read the old accounts. This clone does not call Vercel Blob or Vercel functions for login. Drive and the optional OpenAI stills proxy still need their own server; on the Pages clone they stay closed and the rest of the board works.
 
