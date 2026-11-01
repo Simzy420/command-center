@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Zap } from 'lucide-react';
+import { fetchRunpodBalance, formatUsd, type RunpodBalance } from '@/adapters/runpod/balance';
 import { WidgetFrame } from '@/components/shell/WidgetFrame';
 import { cn } from '@/lib/cn';
 import type { WidgetRenderProps } from '@/registry/types';
@@ -54,36 +55,18 @@ async function fetchCompute(): Promise<ComputeData> {
   return data;
 }
 
-interface RunpodData { balance: number; spendPerHr: number; hoursLeft: number | null; updated: string; }
-const RUNPOD_URL = 'https://raw.githubusercontent.com/Simzy420/command-center/main/public/runpod-balance.json';
-async function fetchRunpod(): Promise<RunpodData | null> {
-  try {
-    const j = (await fetchJson(RUNPOD_URL + '?t=' + Date.now())) as RunpodData;
-    return typeof j?.balance === 'number' ? j : null;
-  } catch { return null; }
-}
-
-function formatUsd(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
 export function ComputeWidget({ widget }: WidgetRenderProps) {
   const [data, setData] = useState<ComputeData | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [light, setLight] = useState<RefreshLight>('idle');
-  const [rp, setRp] = useState<RunpodData | null>(null);
+  const [rp, setRp] = useState<RunpodBalance | null>(null);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
-    void fetchRunpod().then(setRp);
+    void fetchRunpodBalance().then(setRp);
     try {
       const d = await fetchCompute();
       setData(d);
