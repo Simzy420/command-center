@@ -5,6 +5,8 @@ import { StillProviderSwitch } from '@/components/image/StillProviderSwitch';
 import type { GeneratedImage } from '@/adapters/imagegen';
 import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { PERCHANCE_PHOTO_URL } from '@/adapters/perchance';
+import { FaceSwapExtendPanel } from '@/components/widgets/FaceSwapExtendPanel';
+import { RunpodBalanceLine } from '@/components/widgets/RunpodBalanceLine';
 import { Wan22Panel } from '@/components/widgets/Wan22Panel';
 import { SwaprPanel } from '@/components/widgets/SwaprPanel';
 import { SwaprMixPanel } from '@/components/widgets/SwaprMixPanel';
@@ -20,6 +22,7 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
 
   return (
     <WidgetFrame widget={widget} title="Image gen">
+      <RunpodBalanceLine />
       <div className="mb-3 grid grid-cols-2 gap-2" role="group" aria-label="Image model">
         <button
           type="button"
@@ -53,6 +56,17 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
           onClick={() => setModel('wanExtend')}
         >
           Wan Extend
+        </button>
+        <button
+          type="button"
+          aria-pressed={model === 'faceSwapExtend'}
+          className={cn(
+            'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
+            model === 'faceSwapExtend' && 'hud-btn-primary',
+          )}
+          onClick={() => setModel('faceSwapExtend')}
+        >
+          Face Swap + Extend
         </button>
         <div className="col-span-2 grid grid-cols-2 gap-2">
           <button
@@ -95,6 +109,7 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
 function ModelPanel({ model }: { model: ImageGenModel }) {
   if (model === 'wan22') return <Wan22Panel />;
   if (model === 'wanExtend') return <WanExtendPanel />;
+  if (model === 'faceSwapExtend') return <FaceSwapExtendPanel />;
   if (model === 'swapr') return <SwaprPanel />;
   if (model === 'swaprMix') return <SwaprMixPanel />;
   return <StillsPanel />;
