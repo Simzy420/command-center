@@ -7,24 +7,24 @@ export function FaceSwapExtendPanel() {
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] uppercase tracking-wider text-fuchsia-200/70">2 Image Face Swap + Extend · RunPod</p>
+      <p className="text-[11px] uppercase tracking-wider text-fuchsia-200/70">Swap 2 Faces · RunPod</p>
       <p className="text-sm leading-relaxed text-white/70">
-        Two photos: the left image is the face to copy, the right image is the body and scene to keep. Then extend that still into video. The first run can take a few minutes while the RunPod worker starts.
+        Three uploads: the left face replaces the person on the left, the right face replaces the person on the right, and the middle picture is the scene with both people. You can upload a short video clip instead of the scene. The first run can take a few minutes while the RunPod worker starts.
       </p>
       <a href={FACE_SWAP_EXTEND_SPACE_URL} target="_blank" rel="noreferrer" className="hud-btn-primary min-h-[48px] w-full">
-        Open 2 Image Face Swap
+        Open Swap 2 Faces
       </a>
       {embedBlocked ? (
         <p className="text-xs leading-relaxed text-white/55">
-          This page can&apos;t embed the Space. Open 2 Image Face Swap still opens it in a new tab.
+          This page can&apos;t embed the Space. Open Swap 2 Faces still opens it in a new tab.
         </p>
       ) : (
         <>
           <p className="text-xs leading-relaxed text-white/55">
-            Same Space, embedded. Unlock it, then use the two image slots. If the frame stays blank, use Open 2 Image Face Swap.
+            Same Space, embedded. Unlock it, then use the three picture slots or a video clip. If the frame stays blank, use Open Swap 2 Faces.
           </p>
           <iframe
-            title="2 Image Face Swap + Extend"
+            title="Swap 2 Faces"
             src={FACE_SWAP_EXTEND_EMBED_URL}
             className="h-[28rem] w-full rounded-2xl border border-white/10 bg-black"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

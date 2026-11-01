@@ -66,7 +66,7 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
           )}
           onClick={() => setModel('faceSwapExtend')}
         >
-          2 Image Face Swap
+          Swap 2 Faces
         </button>
         <div className="col-span-2 grid grid-cols-2 gap-2">
           <button
