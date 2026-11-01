@@ -14,7 +14,7 @@ test('Perchance stays a new-tab link and does not replace the image models', () 
   assert.match(widget, /setModel\('wan22'\)/);
   assert.match(widget, /setModel\('wanExtend'\)/);
   assert.match(widget, /setModel\('faceSwapExtend'\)/);
-  assert.match(widget, /2 Image Face Swap/);
+  assert.match(widget, /Swap 2 Faces/);
   assert.match(widget, /RunpodBalanceLine/);
   assert.match(widget, /setModel\('swapr'\)/);
   assert.match(widget, /setModel\('swaprMix'\)/);

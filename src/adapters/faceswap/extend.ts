@@ -1,3 +1,3 @@
-/** Newest public Space: two-image BFS face swap (face + body), then Wan 2.2 extend. */
+/** Space that swaps two people at once: left face, right face, and the scene picture or clip. */
 export const FACE_SWAP_EXTEND_SPACE_URL = 'https://simzy-face-swap-extend-video.hf.space/';
 export const FACE_SWAP_EXTEND_EMBED_URL = 'https://simzy-face-swap-extend-video.hf.space/?embed=true';
