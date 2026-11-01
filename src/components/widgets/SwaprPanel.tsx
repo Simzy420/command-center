@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SWAPR_APP_URL } from '@/adapters/swapr';
 import { embedFrameAccepted } from '@/lib/embedFrame';
+import { TemplateClipRail } from '@/components/widgets/TemplateClipRail';
 
 export function SwaprPanel() {
   const [embedBlocked, setEmbedBlocked] = useState(false);
@@ -16,9 +17,9 @@ export function SwaprPanel() {
         Open Swapr
       </a>
       <p className="text-xs leading-relaxed text-white/55">
-        In Swapr: Motions → <span className="text-white/80">Add template</span> → pick a ~3–5s MP4/MOV
-        (under ~2.5 MB) → select it → upload your still → Generate.
+        Motions autoplay here. Face Swap and Extend are tabs in Swapr. In Motions: pick a clip, upload a still, then Generate.
       </p>
+      <TemplateClipRail />
       {embedBlocked ? (
         <p className="text-xs leading-relaxed text-white/55">
           This page can&apos;t embed the app. Open Swapr still opens it in a new tab.
