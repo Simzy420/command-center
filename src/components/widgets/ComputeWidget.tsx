@@ -101,7 +101,7 @@ export function ComputeWidget({ widget }: WidgetRenderProps) {
   const badge = phase === 'err' ? 'ERR' : phase === 'live' ? 'LIVE' : 'SYNC';
 
   return (
-    <WidgetFrame widget={widget} title="Compute" badge={badge}>
+    <WidgetFrame widget={widget} title="BBA Compute" badge={badge}>
       <div className="space-y-3">
         {/* Header row */}
         <div className="flex items-center justify-between">

@@ -113,7 +113,7 @@ registerWidget({
 
 registerWidget({
   type: 'compute',
-  title: 'Compute Balance',
+  title: 'BBA Compute',
   description: 'Live Virtuals compute remaining — agent LLM inference budget. Tap refresh to update.',
   icon: 'trade',
   defaultSize: { w: 6, h: 6 },
