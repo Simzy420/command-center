@@ -27,8 +27,8 @@ export function SwaprPanel() {
         Multi-face + video live in the Space only (not a second marker UI here): unlock →{' '}
         <span className="text-white/80">Swap advanced</span> → left/right faces map to left/right
         people → optional <span className="text-white/80">Or a video clip of both people</span> → Swap
-        both faces (~5s cap). Colored face marks / replace-target picks ship in that same Space when
-        ready — open Face Swap again after unlock. Prefer{' '}
+        both faces (~5s cap). Colored face marks, body-part replace marks, and replace-target picks
+        ship in that same Space when ready — open Face Swap again after unlock. Prefer{' '}
         <a href={SWAPR_MIX_SPACE_URL} target="_blank" rel="noreferrer" className="text-fuchsia-200/90 underline">
           full-screen Space
         </a>{' '}

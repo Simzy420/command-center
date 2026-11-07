@@ -14,7 +14,8 @@ test('Swapr URLs point at the four-button app and Face Swap deep link', () => {
   assert.match(panel, /Or a video clip of both people/);
   assert.match(panel, /Swap advanced/);
   assert.match(panel, /Colored face marks/);
+  assert.match(panel, /body-part replace marks/);
   assert.match(panel, /SWAPR_MIX_SPACE_URL/);
-  // Command center must not ship its own face-marker canvas — Space owns that UI.
+  // Command center must not ship its own face/body marker canvas — Space owns that UI.
   assert.equal(/canvas|Annotat|ImageEditor|face-mark/i.test(panel), false);
 });
