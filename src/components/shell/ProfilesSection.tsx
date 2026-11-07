@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { AccountNotice } from '@/adapters/accounts/client';
+import { OWNER_EMAIL } from '@/adapters/accounts/allowlist';
 import { useProfileStore } from '@/store/profileStore';
 import { useSessionStore } from '@/store/sessionStore';
 
@@ -12,18 +14,22 @@ export function ProfilesSection() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function run(action: 'create' | 'login') {
     setBusy(true);
     setError('');
+    setNotice('');
     try {
       if (action === 'create') await createAccount(name, password);
       else await login(name, password);
       setName('');
       setPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not open that profile.');
+      const message = err instanceof Error ? err.message : 'Could not open that profile.';
+      if (err instanceof AccountNotice) setNotice(message);
+      else setError(message);
     } finally {
       setBusy(false);
     }
@@ -64,8 +70,9 @@ export function ProfilesSection() {
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Email"
-            autoComplete="username"
-            aria-label="Username"
+            autoComplete="email"
+            inputMode="email"
+            aria-label="Email"
           />
           <input
             className="hud-input w-full"
@@ -77,8 +84,14 @@ export function ProfilesSection() {
             aria-label="Profile password"
           />
           <p className="text-xs leading-relaxed text-white/45">
-            Casey's board stays view only. The password is hashed on the server and is not stored in plain text.
+            Casey's board stays view only. Sign-up is only open for {OWNER_EMAIL}. Supabase emails a confirmation
+            link; after you open it, log in here. The password stays in Supabase Auth.
           </p>
+          {notice ? (
+            <p className="text-xs text-amber-100" data-profile-notice>
+              {notice}
+            </p>
+          ) : null}
           {error ? <p className="text-xs text-rose-200">{error}</p> : null}
           <button type="submit" className="hud-btn-primary w-full" disabled={busy}>
             Log in
