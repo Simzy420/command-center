@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Project Pages path: https://simzy420.github.io/command-center/
+/** Supabase clone: https://simzy420.github.io/command-center-supabase/
+ *  Set VITE_BASE_PATH for that Pages project. This repo's own Pages site stays /command-center/.
  *  Vercel (VERCEL=1) uses `/` so /api/generate-image works at the deployment root. */
-const pagesBase = process.env.VERCEL ? '/' : '/command-center/';
+const pagesBase = process.env.VITE_BASE_PATH
+  || (process.env.VERCEL ? '/' : '/command-center/');
 
 export default defineConfig({
   base: pagesBase,
@@ -16,7 +18,7 @@ export default defineConfig({
     {
       name: 'accounts-api',
       async configureServer(server) {
-        const { handleAccountsRequest } = await import('./api/_lib/accounts.ts');
+        const { handleAccountsRequest } = await import('./serverless-src/_lib/accounts.ts');
         server.middlewares.use((req, res, next) => {
           if (!req.url?.startsWith('/api/accounts')) {
             next();
@@ -32,7 +34,7 @@ export default defineConfig({
         });
       },
       async configurePreviewServer(server) {
-        const { handleAccountsRequest } = await import('./api/_lib/accounts.ts');
+        const { handleAccountsRequest } = await import('./serverless-src/_lib/accounts.ts');
         server.middlewares.use((req, res, next) => {
           if (!req.url?.startsWith('/api/accounts')) {
             next();
@@ -51,7 +53,7 @@ export default defineConfig({
     {
       name: 'drive-api',
       async configureServer(server) {
-        const { handleDriveRequest } = await import('./api/_lib/handle.ts');
+        const { handleDriveRequest } = await import('./serverless-src/_lib/handle.ts');
         server.middlewares.use((req, res, next) => {
           if (!req.url?.startsWith('/api/drive')) {
             next();
@@ -67,7 +69,7 @@ export default defineConfig({
         });
       },
       async configurePreviewServer(server) {
-        const { handleDriveRequest } = await import('./api/_lib/handle.ts');
+        const { handleDriveRequest } = await import('./serverless-src/_lib/handle.ts');
         server.middlewares.use((req, res, next) => {
           if (!req.url?.startsWith('/api/drive')) {
             next();

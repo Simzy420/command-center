@@ -7,6 +7,7 @@ import { shouldUseImageProxy } from '@/adapters/imagegen';
 import { PERCHANCE_PHOTO_URL } from '@/adapters/perchance';
 import { Wan22Panel } from '@/components/widgets/Wan22Panel';
 import { SwaprPanel } from '@/components/widgets/SwaprPanel';
+import { SwaprMixPanel } from '@/components/widgets/SwaprMixPanel';
 import { WanExtendPanel } from '@/components/widgets/WanExtendPanel';
 import { cn } from '@/lib/cn';
 import { useImageStore, type ImageGenModel } from '@/store/imageStore';
@@ -53,17 +54,30 @@ export function ImageGenWidget({ widget }: WidgetRenderProps) {
         >
           Wan Extend
         </button>
-        <button
-          type="button"
-          aria-pressed={model === 'swapr'}
-          className={cn(
-            'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
-            model === 'swapr' && 'hud-btn-primary',
-          )}
-          onClick={() => setModel('swapr')}
-        >
-          Swapr
-        </button>
+        <div className="col-span-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            aria-pressed={model === 'swapr'}
+            className={cn(
+              'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
+              model === 'swapr' && 'hud-btn-primary',
+            )}
+            onClick={() => setModel('swapr')}
+          >
+            Swapr
+          </button>
+          <button
+            type="button"
+            aria-pressed={model === 'swaprMix'}
+            className={cn(
+              'hud-btn-ghost min-h-[48px] whitespace-normal px-1 text-center text-[11px] leading-tight',
+              model === 'swaprMix' && 'hud-btn-primary',
+            )}
+            onClick={() => setModel('swaprMix')}
+          >
+            Swapr Mix
+          </button>
+        </div>
       </div>
       <a
         href={PERCHANCE_PHOTO_URL}
@@ -82,6 +96,7 @@ function ModelPanel({ model }: { model: ImageGenModel }) {
   if (model === 'wan22') return <Wan22Panel />;
   if (model === 'wanExtend') return <WanExtendPanel />;
   if (model === 'swapr') return <SwaprPanel />;
+  if (model === 'swaprMix') return <SwaprMixPanel />;
   return <StillsPanel />;
 }
 
